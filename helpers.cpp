@@ -25,7 +25,6 @@ int cudaDeviceProperties(){
     printf("  Compute Capability: %d.%d\n", prop.major, prop.minor);
     printf("  Total Global Memory (GiB): %lf\n", prop.totalGlobalMem/bytesInGiB);
     printf("  Max Threads per Block: %d\n", prop.maxThreadsPerBlock);
-    printf("  Maximum x Dimension of Grid: %d\n", prop.maxGridSize[0]);
     printf("  Memory Clock Rate (KHz): %d\n", prop.memoryClockRate);
     printf("  Memory Bus Width (bits): %d\n", prop.memoryBusWidth);
     printf("  Peak Memory Bandwith (GB/s): %f\n\n",
