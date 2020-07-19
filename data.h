@@ -3,8 +3,15 @@
 
 #include <string>
 
-#define TRAIN_DATA "data/mnist_train.csv"   // training data file
-#define TEST_DATA "data/mnist_test.csv"     // test data file
+// setup paths for OS
+#if defined(__linux__)
+  #define TRAIN_DATA "data/mnist_train.csv"   // training data file
+  #define TEST_DATA "data/mnist_test.csv"     // test data file
+#elif defined(_WIN64) || defined(_WIN32)
+  #define TRAIN_DATA "data\\mnist_train.csv"   // training data file
+  #define TEST_DATA "data\\mnist_test.csv"     // test data file
+#endif // OS check
+
 #define HEIGHT (28)                         // number of pixel rows for digit
 #define WIDTH  (28)                         // number of pixel columns for digit
 #define NUM_FEATURES (784)                  // total number of pixels (height x width)
