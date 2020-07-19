@@ -2,6 +2,7 @@
 #define DATA_H
 
 #include <string>
+#include <vector>
 
 // setup paths for OS
 #if defined(__linux__)
@@ -26,8 +27,9 @@ struct Data{
 	double * value;
 };
 
-void load_csv(Data * &data, std::string data_file, int size);
-void print_digit(Data digit);
+void load_csv(Data * data, std::string data_file, int size);
+void train_test_split(Data * inData, int dataSize, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio);
+void print_digit(Data &digit);
 
 
 #endif // DATA_H

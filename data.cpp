@@ -4,7 +4,7 @@
 
 
 // loads MNIST data from csv file 
-void load_csv(Data * &data, std::string data_file, int size){
+void load_csv(Data * data, std::string data_file, int size){
 
 	// open the data file
   std::ifstream csv_file(data_file);
@@ -35,7 +35,41 @@ void load_csv(Data * &data, std::string data_file, int size){
 	csv_file.close();
 }
 
-void print_digit(Data digit){
+void train_test_split(Data * inData, int dataSize, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio){
+
+  int temp;
+  int swap;
+
+  int testSize = floor(((float)dataSize * testRatio));
+
+  int order[dataSize];
+
+  // init data order
+	for (int i = 0; i < dataSize; ++i){
+		order[i] = i;
+	}
+
+  // randomize order
+	for (int i = 0; i < dataSize; ++i){
+    temp = order[i];
+    swap = rand() % dataSize;
+    order[i] = order[swap];
+    order[swap] = temp;
+  }
+
+  // put randomly selected examples into training set
+	for (int i = 0; i < dataSize-testSize; ++i){
+    trainSet.push_back(inData[order[i]]);
+  }
+
+  // put randomly selected examples into validation set
+	for (int i = dataSize-testSize; i < dataSize; ++i){
+    testSet.push_back(inData[order[i]]);
+  }
+
+}
+
+void print_digit(Data &digit){
 
 	int count = 0;
 	for (int i = 0; i < HEIGHT; ++i){
@@ -45,7 +79,7 @@ void print_digit(Data digit){
 			if (digit.value[count++] == 0.0){
 
 				std::cout << " ";
-			}
+		}
 			else if (digit.value[count] < 0.5){
 				std::cout << "/";
 			}

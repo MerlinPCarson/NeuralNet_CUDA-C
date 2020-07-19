@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include <vector>
 
 #include "kernels.h"
 #include "neural_net.h"
@@ -45,9 +46,15 @@ int main(int argc, char * argv[])
 	load_csv(trainData, TRAIN_DATA, trainSize);
 	load_csv(testData, TEST_DATA, testSize);
 
+  // split datasets into training and validation sets
+  std::vector<Data>  trainSet;
+  std::vector<Data>  valSet;
+  train_test_split(trainData, trainSize, trainSet, valSet, 10000.0/60000);
+
 #ifdef TESTING
   // print random digit from each dataset
-  print_digit(trainData[rand()%trainSize]);
+  print_digit(trainSet[rand()%trainSet.size()]);
+  print_digit(valSet[rand()%valSet.size()]);
   print_digit(testData[rand()%testSize]);
 #endif // TESTING
 
