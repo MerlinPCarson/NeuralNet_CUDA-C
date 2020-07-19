@@ -53,9 +53,15 @@ int main(int argc, char * argv[])
 
 #ifdef TESTING
   // print random digit from each dataset
+  print_digit(trainSet[0]);
   print_digit(trainSet[rand()%trainSet.size()]);
+  print_digit(trainSet[trainSet.size()-1]);
+  print_digit(valSet[0]);
   print_digit(valSet[rand()%valSet.size()]);
+  print_digit(valSet[valSet.size()-1]);
+  print_digit(testData[0]);
   print_digit(testData[rand()%testSize]);
+  print_digit(testData[testSize-1]);
 #endif // TESTING
 
   delete trainData;

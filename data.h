@@ -24,7 +24,7 @@
 // data structure for MNIST digits
 struct Data{
 	int label;
-	double * value;
+	double value[NUM_FEATURES];
 };
 
 void load_csv(Data * data, std::string data_file, int size);

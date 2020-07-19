@@ -22,7 +22,7 @@ void load_csv(Data * data, std::string data_file, int size){
 		csv_file.ignore(1);
 
 		// allocate memory for the data item's values
-		data[i].value = new double[NUM_FEATURES];
+		//data[i].value = new double[NUM_FEATURES];
 
 		// load in the values for the data item
 		for (int j = 0; j < NUM_FEATURES; ++j){
