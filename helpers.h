@@ -1,6 +1,9 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include <stdlib.h>
+#include <cuda_runtime_api.h>
+
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
