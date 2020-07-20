@@ -24,7 +24,7 @@ int testDotProduct()
 {
     float *dev_m, *dev_n, *dev_p;
     float *h_m, *h_n, *h_p;
-    int ROWS = 2, COLS = 3;
+    int ROWS = 5, COLS = 3;
     cudaError_t err;
 
     // Allocate memory for host variables
@@ -75,7 +75,7 @@ int testDotProduct()
     hostDotProduct(h_m, h_n, h_p, ROWS, COLS, COLS, ROWS);
 
     // print out the result
-    printf("CPU:\n");
+    printf("(TEST) dot product on CPU:\n");
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < ROWS; j++) {
             int id = j + i * ROWS;
