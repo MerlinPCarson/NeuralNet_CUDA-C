@@ -4,7 +4,7 @@
 
 
 // loads MNIST data from csv file 
-void load_csv(Data * data, std::string data_file, int size){
+void load_csv(std::vector<Data> &data, std::string data_file, int size){
 
 	// open the data file
   std::ifstream csv_file(data_file);
@@ -27,7 +27,7 @@ void load_csv(Data * data, std::string data_file, int size){
 		// load in the values for the data item
 		for (int j = 0; j < NUM_FEATURES; ++j){
 			csv_file >> data[i].value[j];
-			data[i].value[j] /= MAX_VAL;
+			data[i].value[j] /= MAX_VAL;  // normalize values
 			csv_file.ignore(1);	// ignore comma or end of line char
 		}
 	}
@@ -35,36 +35,43 @@ void load_csv(Data * data, std::string data_file, int size){
 	csv_file.close();
 }
 
-void train_test_split(Data * inData, int dataSize, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio){
+void shuffle_idx(int * order, int size){
 
   int temp;
   int swap;
 
-  int testSize = floor(((float)dataSize * testRatio));
-
-  int order[dataSize];
-
   // init data order
-	for (int i = 0; i < dataSize; ++i){
+	for (int i = 0; i < size; ++i){
 		order[i] = i;
 	}
 
   // randomize order
-	for (int i = 0; i < dataSize; ++i){
+	for (int i = 0; i < size; ++i){
     temp = order[i];
-    swap = rand() % dataSize;
+    swap = rand() % size;
     order[i] = order[swap];
     order[swap] = temp;
   }
 
+}
+
+void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio){
+
+  int dataSize = dataSet.size();
+  int testSize = floor(((float)dataSize * testRatio));
+
+  int order[dataSize];
+
+  shuffle_idx(order, dataSize);
+
   // put randomly selected examples into training set
 	for (int i = 0; i < dataSize-testSize; ++i){
-    trainSet.push_back(inData[order[i]]);
+    trainSet.push_back(dataSet[order[i]]);
   }
 
   // put randomly selected examples into validation set
 	for (int i = dataSize-testSize; i < dataSize; ++i){
-    testSet.push_back(inData[order[i]]);
+    testSet.push_back(dataSet[order[i]]);
   }
 
 }

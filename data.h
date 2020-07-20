@@ -27,8 +27,9 @@ struct Data{
 	double value[NUM_FEATURES];
 };
 
-void load_csv(Data * data, std::string data_file, int size);
-void train_test_split(Data * inData, int dataSize, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio);
+void load_csv(std::vector<Data> &data, std::string data_file, int size);
+void shuffle_idx(int * order, int dataSize);
+void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio);
 void print_digit(Data &digit);
 
 
