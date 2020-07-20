@@ -1,6 +1,30 @@
 #include <stdio.h>
 #include "helpers.h"
 
+void hostDotProduct(float *M, float *N, float *P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+{
+    int num_PRows = num_MRows;
+    int num_PCols = num_NCols;
+
+    if (num_MCols != num_NRows) {
+        printf("num_MCols != num_NRows\n");
+        exit(-1);
+    }
+
+    for (int row = 0; row < num_PRows; row++) {
+        for (int col = 0; col < num_PCols; col++) {
+            int p_idx = col + row * num_PCols;
+
+            // Go through the M, N elements
+            int i, j;
+            for (i = 0, j = 0; i < num_NRows && j < num_MCols; i++, j++) {
+                int m_idx = j + row * num_MCols;
+                int n_idx = col + i * num_NCols;
+                P[p_idx] += M[m_idx] * N[n_idx];
+            }
+        }
+    }
+}
 
 int cudaDeviceProperties(){
   // get number of cude devices
