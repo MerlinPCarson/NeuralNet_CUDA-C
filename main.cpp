@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
 	load_csv(trainData, TRAIN_DATA, trainSize);
 	load_csv(testData, TEST_DATA, testSize);
 
-  // split datasets into training and validation sets
+  // split training data into training and validation sets
   std::vector<Data>  trainSet;
   std::vector<Data>  valSet;
   train_test_split(trainData, trainSet, valSet, (float)testSize/trainSize);

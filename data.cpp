@@ -21,14 +21,11 @@ void load_csv(std::vector<Data> &data, std::string data_file, int size){
 		csv_file >> data[i].label;
 		csv_file.ignore(1);
 
-		// allocate memory for the data item's values
-		//data[i].value = new double[NUM_FEATURES];
-
 		// load in the values for the data item
 		for (int j = 0; j < NUM_FEATURES; ++j){
 			csv_file >> data[i].value[j];
 			data[i].value[j] /= MAX_VAL;  // normalize values
-			csv_file.ignore(1);	// ignore comma or end of line char
+			csv_file.ignore(1);	          // ignore comma or end of line char
 		}
 	}
 
@@ -81,19 +78,15 @@ void print_digit(Data &digit){
 	int count = 0;
 	for (int i = 0; i < HEIGHT; ++i){
 		for (int j = 0; j < WIDTH; ++j){
-
-
 			if (digit.value[count++] == 0.0){
-
 				std::cout << " ";
-		}
+      }
 			else if (digit.value[count] < 0.5){
 				std::cout << "/";
 			}
 			else{
 				std::cout << "#";
 			}
-
 		}
 		std::cout << std::endl;
 	}
