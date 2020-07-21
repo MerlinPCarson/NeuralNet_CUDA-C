@@ -1,5 +1,22 @@
 #include <stdio.h>
 #include "helpers.h"
+#include <math.h>
+
+float hostSigmoid(float z)
+{
+    float y = (float)1 / (1 + exp(-z));
+    return y;
+}
+
+void hostActivationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
+{
+    for (int i = 0; i < numRows; i++) {
+        for (int j = 0; j < numCols; j++) {
+            int idx = j + i * numCols;
+            h_Y[idx] = hostSigmoid(h_Z[idx]);
+        }
+    }
+}
 
 void hostDotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
 {

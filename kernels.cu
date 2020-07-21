@@ -2,6 +2,24 @@
 #include <stdio.h>
 #include <math.h>
 
+__device__ float sigmoid(float z)
+{
+    float y = (float)1 / (1 + exp(-z));
+    return y;
+}
+
+__global__ void activationFuncDevice(float *d_Z, float *d_Y, int numRows, int numCols)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < numRows && col < numCols) {
+        int idx = col + row * numCols;
+        float z = d_Z[idx];
+
+        d_Y[idx] = sigmoid(z);
+    }
+}
 
 // This is currently a non tiled version based on the text book implementation
 __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
@@ -30,8 +48,47 @@ __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRo
     }
 }
 
-void dotProduct(float* d_M, float* d_N, float* d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+// 
+// Interface functions for the corresponding kernel functions.
+//
+void activationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
 {
+    float *d_Z, *d_Y;
+    cudaError_t cudaStatus;
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_Z, numRows * numCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_Y, numRows * numCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_Z, h_Z, numRows * numCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_Y, h_Y, numRows * numCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+    
+    dim3 gridDim((int)ceil((float)numCols / BLOCK_WIDTH), (int)ceil((float)numRows / BLOCK_WIDTH), 1);
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+
+    // Call the kernel
+    activationFuncDevice<<<gridDim, blockDim>>>(d_Z, d_Y, numRows, numCols);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_Y, d_Y, numRows * numCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_Z);
+    cudaFree(d_Y);
+}
+
+void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+{
+    float *d_M, *d_N, *d_P;
+    cudaError_t cudaStatus;
     int num_PRows = num_MRows;
     int num_PCols = num_NCols;
 
@@ -40,8 +97,38 @@ void dotProduct(float* d_M, float* d_N, float* d_P, int num_MRows, int num_MCols
         exit(-1);
     }
 
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_M, num_MRows * num_MCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_N, num_NRows * num_NCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_P, num_PRows * num_PCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_M, h_M, num_MRows * num_MCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_N, h_N, num_NRows * num_NCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_P, h_P, num_PRows * num_PCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
     dim3 gridDim((int)ceil((float)num_PCols / BLOCK_WIDTH), (int)ceil((float)num_PRows / BLOCK_WIDTH), 1);
     dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
 
-    dotProductDevice << <gridDim, blockDim >> > (d_M, d_N, d_P, num_MRows, num_MCols, num_NRows, num_NCols);
+    // Call the kernel
+    dotProductDevice<<<gridDim, blockDim>>>(d_M, d_N, d_P, num_MRows, num_MCols, num_NRows, num_NCols);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_P, d_P, num_PRows * num_PCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_M);
+    cudaFree(d_N);
+    cudaFree(d_P);
 }
