@@ -1,14 +1,27 @@
 #ifndef NUERAL_NET_H
 #define NEURAL_NET_H
 
+#include "data.h"
+
+#define HIDDEN_SIZE (10)    // number of neurons in hidden layer
 
 class NeuralNet{
 
     public:
+
         NeuralNet();
-        NeuralNet(int input_size, int hidden_size, int out_size);
+        NeuralNet(float eta);
+
 
     private:
+
+        void init_weights();
+        void show_weights();
+
+        float eta;            // learning rate
+
+        double hidden_weights[NUM_FEATURES+1][HIDDEN_SIZE];    // hidden layer weights
+        double output_weights[HIDDEN_SIZE+1][NUM_LABELS];   // output layer weights
 
 };
     

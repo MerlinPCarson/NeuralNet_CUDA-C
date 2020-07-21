@@ -2,8 +2,11 @@
 #define HELPERS_H
 
 #include <stdlib.h>
+#include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <driver_types.h>
 
+#define TEST_DOT_PRODUCT
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
@@ -17,5 +20,6 @@ do {												\
 
 // display all cuda device
 int cudaDeviceProperties();
+void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 
 #endif // HELPERS_H

@@ -22,3 +22,5 @@ Win/mnist/mnist.vcxproj.user
 
 # data files exceed file size without fls
 data/
+Win/mnist/x64/Debug/data/mnist_train.csv
+Win/mnist/x64/Debug/data/mnist_test.csv
