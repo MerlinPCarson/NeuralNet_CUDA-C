@@ -3,6 +3,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
+#include <vector>
 
 #include "kernels.h"
 #include "neural_net.h"
@@ -134,22 +135,39 @@ int main(int argc, char * argv[])
 #endif
 
   	// init example data structs
-	Data * trainData = new Data[trainSize];
-	Data * testData = new Data[testSize];
+  std::vector<Data> trainData(trainSize);
+  std::vector<Data> testData(testSize);
 
 	// load training and test data from csv file
 	load_csv(trainData, TRAIN_DATA, trainSize);
 	load_csv(testData, TEST_DATA, testSize);
 
+  // split training data into training and validation sets
+  std::vector<Data>  trainSet;
+  std::vector<Data>  valSet;
+  train_test_split(trainData, trainSet, valSet, (float)testSize/trainSize);
+
+  // show data set info
+  std::cout << "\nSize of training set: " << trainSet.size() << std::endl;
+  std::cout << "Size of validation set: " << valSet.size() << std::endl;
+  std::cout << "Size of test set: " << testData.size() << std::endl;
+
 #ifdef TESTING
   // print random digit from each dataset
-  print_digit(trainData[rand()%trainSize]);
+  print_digit(trainSet[0]);
+  print_digit(trainSet[rand()%trainSet.size()]);
+  print_digit(trainSet[trainSet.size()-1]);
+  print_digit(valSet[0]);
+  print_digit(valSet[rand()%valSet.size()]);
+  print_digit(valSet[valSet.size()-1]);
+  print_digit(testData[0]);
   print_digit(testData[rand()%testSize]);
+  print_digit(testData[testSize-1]);
 #endif // TESTING
 
-  delete trainData;
-  delete testData;
- 
+  // instantiate neural network with learning rate
+  NeuralNet model = NeuralNet(0.01);
+
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
   std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";

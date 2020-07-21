@@ -2,6 +2,7 @@
 #define DATA_H
 
 #include <string>
+#include <vector>
 
 // setup paths for OS
 #if defined(__linux__)
@@ -23,11 +24,13 @@
 // data structure for MNIST digits
 struct Data{
 	int label;
-	double * value;
+	double value[NUM_FEATURES+1];             // number of pixels +1 for bias term
 };
 
-void load_csv(Data * &data, std::string data_file, int size);
-void print_digit(Data digit);
+void load_csv(std::vector<Data> &data, std::string data_file, int size);
+void shuffle_idx(int * order, int dataSize);
+void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio);
+void print_digit(Data &digit);
 
 
 #endif // DATA_H
