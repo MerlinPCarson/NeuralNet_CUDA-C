@@ -2,7 +2,9 @@
 #define HELPERS_H
 
 #include <stdlib.h>
+#include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <driver_types.h>
 
 #define TEST_DOT_PRODUCT
 

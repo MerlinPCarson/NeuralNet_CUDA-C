@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "helpers.h"
 
-void hostDotProduct(float *M, float *N, float *P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+void hostDotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
 {
     int num_PRows = num_MRows;
     int num_PCols = num_NCols;
@@ -20,7 +20,7 @@ void hostDotProduct(float *M, float *N, float *P, int num_MRows, int num_MCols, 
             for (i = 0, j = 0; i < num_NRows && j < num_MCols; i++, j++) {
                 int m_idx = j + row * num_MCols;
                 int n_idx = col + i * num_NCols;
-                P[p_idx] += M[m_idx] * N[n_idx];
+                h_P[p_idx] += h_M[m_idx] * h_N[n_idx];
             }
         }
     }

@@ -22,69 +22,92 @@
 // Only called while testing dot product
 int testDotProduct()
 {
-    float *dev_m, *dev_n, *dev_p;
-    float *h_m, *h_n, *h_p;
-    int ROWS = 5, COLS = 3;
-    cudaError_t err;
+    float *d_M, *d_N, *d_P;
+    float *h_M, *h_N, *h_P;
+    int ROWS = 10, COLS = 10;
+    cudaError_t cudaStatus;
 
     // Allocate memory for host variables
-    h_m = (float *)malloc(ROWS * COLS * sizeof(float));
-    h_n = (float *)malloc(ROWS * COLS * sizeof(float));
-    h_p = (float *)malloc(ROWS * ROWS * sizeof(float));
-    if (h_m == NULL || h_n == NULL || h_p == NULL) {
+    h_M = (float *)malloc(ROWS * COLS * sizeof(float));
+    h_N = (float *)malloc(ROWS * COLS * sizeof(float));
+    h_P = (float *)malloc(ROWS * ROWS * sizeof(float));
+    if (h_M == NULL || h_N == NULL || h_P == NULL) {
         printf("Host variable memory allocation failure\n");
         exit(EXIT_FAILURE);
     }
 
     // Allocate memory for device variables
-    err = cudaMalloc((void**)&dev_m, ROWS * COLS * sizeof(float));
-    if (err != cudaSuccess) {
-        printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-        exit(EXIT_FAILURE);
-    }
+    cudaStatus = cudaMalloc((void**)&d_M, ROWS * COLS * sizeof(float));
+    cudaCheckError(cudaStatus);
 
-    err = cudaMalloc((void**)&dev_n, ROWS * COLS * sizeof(float));
-    if (err != cudaSuccess) {
-        printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-        exit(EXIT_FAILURE);
-    }
+    cudaStatus = cudaMalloc((void**)&d_N, ROWS * COLS * sizeof(float));
+    cudaCheckError(cudaStatus);
 
-    err = cudaMalloc((void**)&dev_p, ROWS * ROWS * sizeof(float));
-    if (err != cudaSuccess) {
-        printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-        exit(EXIT_FAILURE);
-    }
+    cudaStatus = cudaMalloc((void**)&d_P, ROWS * ROWS * sizeof(float));
+    cudaCheckError(cudaStatus);
 
     // load arrays with some numbers
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLS; j++) {
             int id = j + COLS * i;
-            h_m[id] = 1;
+            h_M[id] = 1;
         }
     }
 
     for (int i = 0; i < COLS; i++) {
         for (int j = 0; j < ROWS; j++) {
             int id = j + ROWS * i;
-            h_n[id] = 1;
+            h_N[id] = 1;
         }
     }
-    memset(h_p, 0, ROWS * ROWS * sizeof(float));
+    memset(h_P, 0, ROWS * ROWS * sizeof(float));
 
     // Execute on CPU
-    hostDotProduct(h_m, h_n, h_p, ROWS, COLS, COLS, ROWS);
+    hostDotProduct(h_M, h_N, h_P, ROWS, COLS, COLS, ROWS);
 
-    // print out the result
+    // print out the results
     printf("(TEST) dot product on CPU:\n");
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < ROWS; j++) {
             int id = j + i * ROWS;
-            printf("%f ", h_p[id]);
+            printf("%f ", h_P[id]);
         }
         printf("\n");
     }
 
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_M, h_M, ROWS * COLS * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_N, h_M, ROWS * COLS * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_P, h_M, ROWS * ROWS * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
     // Execute on GPU
+    dotProduct(d_M, d_N, d_P, ROWS, COLS, COLS, ROWS);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_P, d_P, ROWS * ROWS * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    printf("(TEST) dot product on GPU:\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < ROWS; j++) {
+            int id = j + i * ROWS;
+            printf("%f ", h_P[id]);
+        }
+        printf("\n");
+    }
+
+    cudaFree(d_M);
+    cudaFree(d_N);
+    cudaFree(d_P);
+
+    free(h_M);
+    free(h_N);
+    free(h_P);
 
     return 0;
 }
