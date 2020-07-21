@@ -173,7 +173,7 @@ int main(int argc, char * argv[])
   // split training data into training and validation sets
   std::vector<Data>  trainSet;
   std::vector<Data>  valSet;
-  //train_test_split(trainData, trainSet, valSet, (float)testSize/trainSize);
+  train_test_split(trainData, trainSet, valSet, (float)testSize/trainSize);
 
   // show data set info
   std::cout << "\nSize of training set: " << trainSet.size() << std::endl;

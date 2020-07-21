@@ -55,13 +55,12 @@ void shuffle_idx(int * order, int size){
 
 }
 
-#if 0
 void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio){
 
   int dataSize = dataSet.size();
   int testSize = floor(((float)dataSize * testRatio));
 
-  int order[dataSize];
+  int * order = new int[dataSize];
 
   shuffle_idx(order, dataSize);
 
@@ -75,8 +74,8 @@ void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, s
     testSet.push_back(dataSet[order[i]]);
   }
 
+  delete order;
 }
-#endif
 
 void print_digit(Data &digit){
 
