@@ -27,6 +27,9 @@ void load_csv(std::vector<Data> &data, std::string data_file, int size){
 			data[i].value[j] /= MAX_VAL;  // normalize values
 			csv_file.ignore(1);	          // ignore comma or end of line char
 		}
+
+    // bias term
+    data[i].value[NUM_FEATURES] = 1;
 	}
 
 	csv_file.close();

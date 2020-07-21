@@ -69,6 +69,9 @@ int main(int argc, char * argv[])
   print_digit(testData[testSize-1]);
 #endif // TESTING
 
+  // instantiate neural network with learning rate
+  NeuralNet model = NeuralNet(0.01);
+
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
   std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";
