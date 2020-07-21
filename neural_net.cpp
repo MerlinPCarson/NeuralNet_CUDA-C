@@ -18,6 +18,7 @@ NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
 
 }
 
+// Glorot uniform weight initialization
 void NeuralNet::init_weights(){
 
   std::default_random_engine generator;
