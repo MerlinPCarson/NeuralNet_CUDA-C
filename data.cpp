@@ -77,15 +77,15 @@ void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, s
   delete order;
 }
 
-void print_digit(Data &digit){
+void print_digit(float * digit, int label){
 
 	int count = 0;
 	for (int i = 0; i < HEIGHT; ++i){
 		for (int j = 0; j < WIDTH; ++j){
-			if (digit.value[count++] == 0.0){
+			if (digit[count++] == 0.0){
 				std::cout << " ";
       }
-			else if (digit.value[count] < 0.5){
+			else if (digit[count] < 0.5){
 				std::cout << "/";
 			}
 			else{
@@ -95,7 +95,7 @@ void print_digit(Data &digit){
 		std::cout << std::endl;
 	}
 
-  std::cout << "Digit: " << digit.label << std::endl;
+  std::cout << "Digit: " << label << std::endl;
 
 	return;
 }

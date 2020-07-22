@@ -182,19 +182,20 @@ int main(int argc, char * argv[])
 
 #ifdef TESTING
   // print random digit from each dataset
-  print_digit(trainSet[0]);
-  print_digit(trainSet[rand()%trainSet.size()]);
-  print_digit(trainSet[trainSet.size()-1]);
-  print_digit(valSet[0]);
-  print_digit(valSet[rand()%valSet.size()]);
-  print_digit(valSet[valSet.size()-1]);
-  print_digit(testData[0]);
-  print_digit(testData[rand()%testSize]);
-  print_digit(testData[testSize-1]);
+  print_digit(trainSet[0].value, trainSet[0].label);
+  print_digit(trainSet[trainSet.size()-1].value, trainSet[trainSet.size()-1].label);
+  print_digit(valSet[0].value, valSet[0].label);
+  print_digit(valSet[valSet.size()-1].value, valSet[valSet.size()-1].label);
+  print_digit(testData[0].value, testData[0].label);
+  print_digit(testData[testSize-1].value, testData[testSize-1].label);
 #endif // TESTING
 
   // instantiate neural network with learning rate
   NeuralNet model = NeuralNet(0.01);
+
+  // main training loop
+  int numEpochs = 2;
+  std::vector<History> history = model.fit(trainSet, valSet, numEpochs);
 
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;

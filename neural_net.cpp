@@ -49,7 +49,55 @@ void NeuralNet::init_weights(){
   
   // init bias weight to 0 for each neuron in output layer
   for(int i = 0; i < NUM_LABELS; ++i){
-      output_weights[HIDDEN_SIZE][i] = 0;
+      output_weights[HIDDEN_SIZE][i] = 0.0;
+  }
+
+}
+
+// training function
+std::vector<History> NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs){
+
+  int * order = new int[trainSet.size()];
+  float batch[BATCH_SIZE][NUM_FEATURES];
+  float target[BATCH_SIZE];
+
+  int numTrainBatches = floor(trainSet.size()/BATCH_SIZE);
+  int numValBatches = floor(valSet.size()/BATCH_SIZE);
+
+  std::vector<History> history;
+
+  // main training loop
+  for(int i = 0; i < num_epochs; ++i){
+    std::cout << "Epoch: " << i << std::endl;
+
+    for(int j = 0; j < numTrainBatches; ++j){
+  
+      // shuffle order of data
+      shuffle_idx(order, trainSet.size());
+  
+      // load batch of data from training set
+      make_batch(batch, target, trainSet, order, j);
+  
+    }
+
+  }
+
+  return history;
+}
+
+// load batch of data from a dataset
+void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum){
+
+  // starting position in training set order for current batch
+  int startIdx = batchNum * BATCH_SIZE;
+  int endIdx = startIdx + BATCH_SIZE;
+  int pos = 0; 
+
+  // copy random order of training elements to contiguous batch
+  for(int i = startIdx; i < endIdx; ++i){
+    memcpy(batch[pos], &dataSet[order[i]].value[0], NUM_FEATURES * sizeof(dataSet[order[i]].value[0]));
+    target[pos] = dataSet[order[i]].label;
+    ++pos;
   }
 
 }
