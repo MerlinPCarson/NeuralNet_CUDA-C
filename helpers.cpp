@@ -30,6 +30,7 @@ void hostDotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_M
 
     for (int row = 0; row < num_PRows; row++) {
         for (int col = 0; col < num_PCols; col++) {
+            float pVal = 0.0;
             int p_idx = col + row * num_PCols;
 
             // Go through the M, N elements
@@ -37,8 +38,9 @@ void hostDotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_M
             for (i = 0, j = 0; i < num_NRows && j < num_MCols; i++, j++) {
                 int m_idx = j + row * num_MCols;
                 int n_idx = col + i * num_NCols;
-                h_P[p_idx] += h_M[m_idx] * h_N[n_idx];
+                pVal += h_M[m_idx] * h_N[n_idx];
             }
+            h_P[p_idx] = pVal;
         }
     }
 }
