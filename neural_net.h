@@ -7,8 +7,8 @@
 #define BATCH_SIZE (10)     // number of examples between weight updates
 
 struct History{
-    float * loss;
-    float * valLoss;
+  std::vector<float> loss;
+  std::vector<float> valLoss;
 };
 
 class NeuralNet{
@@ -18,7 +18,7 @@ class NeuralNet{
         NeuralNet();
         NeuralNet(float eta);
 
-        std::vector<History> fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs);
+        History fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs);
 
     private:
 

@@ -195,7 +195,7 @@ int main(int argc, char * argv[])
 
   // main training loop
   int numEpochs = 2;
-  std::vector<History> history = model.fit(trainSet, valSet, numEpochs);
+  History history = model.fit(trainSet, valSet, numEpochs);
 
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
@@ -203,3 +203,4 @@ int main(int argc, char * argv[])
 
   return 0;
 }
+
