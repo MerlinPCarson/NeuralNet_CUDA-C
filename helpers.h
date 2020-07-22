@@ -6,8 +6,6 @@
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
 
-#define TEST_DOT_PRODUCT
-
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
 do {												\
