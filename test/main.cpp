@@ -72,7 +72,7 @@ int testDotProduct()
                         }
 
                         if (!bPass) {
-                            printf("FAIL: dot product (row/col): [%d, %d] dot [%d, %d]\n",
+                            printf("FAIL: dot product (row/col): [%d / %d] dot [%d, %d]\n",
                                     num_MRows, num_MCols, num_NRows, num_NCols);
                             printf("---dot product on CPU:---\n");
                             printMatrix(h_P1, num_MRows, num_NCols);
@@ -88,7 +88,7 @@ int testDotProduct()
                         free(h_P1);
                         free(h_P2);
 
-                        printf("PASS: dot product (row/col): [%d, %d] dot [%d, %d]\n",
+                        printf("PASS: dot product (row/col): [%d / %d] dot [%d, %d]\n",
                                     num_MRows, num_MCols, num_NRows, num_NCols);
                 }
             }
@@ -99,7 +99,7 @@ int testDotProduct()
 }
 
 // Only called while testing activation func
-int testActivationFunc()
+int testActivationFuncForward()
 {
     float *h_Z, *h_Y1, *h_Y2;
     bool bPass = true;
@@ -122,15 +122,18 @@ int testActivationFunc()
             for (int i = 0; i < numRows; i++) {
                 for (int j = 0; j < numCols; j++) {
                     int id = j + numCols * i;
+                    
+                    // Depending on the values there might be differences int he higher decimal places
+                    // Hence assigning the same value.
                     h_Z[id] = 1;
                 }
             }
 
             // Execute on CPU
-            hostActivationFunc(h_Z, h_Y1, numRows, numCols);
+            hostActivationFuncForward(h_Z, h_Y1, numRows, numCols);
 
             // Execute on GPU
-            activationFunc(h_Z, h_Y2, numRows, numCols);
+            activationFuncForward(h_Z, h_Y2, numRows, numCols);
 
             // Compare the GPU results with the CPU results
             for (int i = 0; bPass && i < numRows; i++) {
@@ -143,11 +146,11 @@ int testActivationFunc()
             }
 
             if (!bPass) {
-                printf("FAIL: activation func (row/col): [%d, %d]\n", numRows, numCols);
-                printf("---activation func on CPU:---\n");
+                printf("FAIL: forward activation func (row/col): [%d / %d]\n", numRows, numCols);
+                printf("---forward activation func on CPU:---\n");
                 printMatrix(h_Y1, numRows, numCols);
                 printf("------\n\n");
-                printf("---activation func on GPU:---\n");
+                printf("---forward activation func on GPU:---\n");
                 printMatrix(h_Y2, numRows, numCols);
                 printf("------\n\n");
                 return -1;
@@ -157,12 +160,85 @@ int testActivationFunc()
             free(h_Y1);
             free(h_Y2);
             
-            printf("PASS: activation func (row/col): [%d, %d]\n", numRows, numCols);
+            printf("PASS: forward activation func(row/col): [%d / %d]\n", numRows, numCols);
 
         }
     }
     
-    printf("*** All tests PASSED: activation func ***\n");
+    printf("*** All tests PASSED: forward activation func ***\n");
+    return 0;
+}
+
+int testActivationFuncBackward()
+{
+    float *h_Z, *h_dervA, *h_dervZ1, *h_dervZ2;
+    bool bPass = true;
+    int MAX_NUM_ROWS = 10, MAX_NUM_COLS = 10;
+
+    for (int numRows = 1; numRows <= MAX_NUM_ROWS; numRows++) {
+        for (int numCols = 1; numCols <= MAX_NUM_COLS; numCols++) {
+                    
+            // Allocate memory for host variables
+            h_Z = (float *)malloc(numRows * numCols * sizeof(float));
+            h_dervA = (float *)malloc(numRows * numCols * sizeof(float));
+            h_dervZ1 = (float *)malloc(numRows * numCols * sizeof(float));
+            h_dervZ2 = (float *)malloc(numRows * numCols * sizeof(float));
+            
+            if (h_Z == NULL || h_dervA == NULL || h_dervZ1 == NULL || h_dervZ2 == NULL) {
+                printf("Host variable memory allocation failure\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // load arrays with some numbers
+            for (int i = 0; i < numRows; i++) {
+                for (int j = 0; j < numCols; j++) {
+                    int id = j + numCols * i;
+                    
+                    // Depending on the values there might be differences int he higher decimal places
+                    // Hence assigning the same value.
+                    h_Z[id] = 1;
+                    h_dervA[id] = 1;
+                }
+            }
+
+            // Execute on CPU
+            hostActivationFuncBackward(h_Z, h_dervA, h_dervZ1, numRows, numCols);
+
+            // Execute on GPU
+            activationFuncBackward(h_Z, h_dervA, h_dervZ2, numRows, numCols);
+
+            // Compare the GPU results with the CPU results
+            for (int i = 0; bPass && i < numRows; i++) {
+                for (int j = 0; bPass && j < numCols; j++) {
+                    int id = j + i * numCols;
+                    if (h_dervZ1[id] != h_dervZ2[id]) {
+                        bPass = false;
+                    }
+                }
+            }
+
+            if (!bPass) {
+                printf("FAIL: backward activation func (row/col): [%d/%d]\n", numRows, numCols);
+                printf("---backward activation func on CPU:---\n");
+                printMatrix(h_dervZ1, numRows, numCols);
+                printf("------\n\n");
+                printf("---backward activation func on GPU:---\n");
+                printMatrix(h_dervZ2, numRows, numCols);
+                printf("------\n\n");
+                return -1;
+            }
+
+            free(h_Z);
+            free(h_dervA);
+            free(h_dervZ1);
+            free(h_dervZ2);
+            
+            printf("*** PASS: backward activation func (row/col): [%d/%d] ***\n", numRows, numCols);
+
+        }
+    }
+    
+    printf("*** All tests PASSED: backward activation func ***\n");
     return 0;
 }
 
@@ -174,7 +250,8 @@ int main(int argc, char * argv[])
   }
 
   testDotProduct();
-  testActivationFunc();
+  testActivationFuncForward();
+  testActivationFuncBackward();
 
   return 0;
 }
