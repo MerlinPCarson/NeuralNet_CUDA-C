@@ -45,3 +45,29 @@ void dotProduct(float* d_M, float* d_N, float* d_P, int num_MRows, int num_MCols
 
     dotProductDevice << <gridDim, blockDim >> > (d_M, d_N, d_P, num_MRows, num_MCols, num_NRows, num_NCols);
 }
+
+__global__ void scalarMultiplication(double scalar, double* M, int Rows, int Cols){
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+
+    if(r < Rows && c < Cols)
+        M[r][c] *= scalar;
+}
+
+
+
+
+__global__ void updateWeights(double* w, float eta, float* error, float* layer, float alpha, int Rows, int Cols){
+    /*
+        w -- set of weights being updated
+        error -- the error by which the weights need to be updated
+        layer -- can be the output-to-hidden layer OR the hidden-to-input layer
+        alpha -- momentum
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < MCols)
+        w[r][c] = eta * error[r][c] * layer + alpha * w[r][c]
+
+}
