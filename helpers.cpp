@@ -8,12 +8,24 @@ float hostSigmoid(float z)
     return y;
 }
 
-void hostActivationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
+void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols)
 {
     for (int i = 0; i < numRows; i++) {
         for (int j = 0; j < numCols; j++) {
             int idx = j + i * numCols;
             h_Y[idx] = hostSigmoid(h_Z[idx]);
+        }
+    }
+}
+
+void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols)
+{
+    for (int i = 0; i < numRows; i++) {
+        for (int j = 0; j < numCols; j++) {
+            int idx = j + i * numCols;
+	        float s = hostSigmoid(h_Z[idx]);
+		
+			h_dervZ[idx] =  h_dervA[idx] * s * (1  - s) ;
         }
     }
 }

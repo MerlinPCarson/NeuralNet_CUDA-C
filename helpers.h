@@ -19,6 +19,7 @@ do {												\
 // display all cuda device
 int cudaDeviceProperties();
 void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
-void hostActivationFunc(float *h_Z, float *h_Y, int numRows, int numCols);
+void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
+void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols);
 
 #endif // HELPERS_H

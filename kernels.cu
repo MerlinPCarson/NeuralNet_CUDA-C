@@ -8,7 +8,7 @@ __device__ float sigmoid(float z)
     return y;
 }
 
-__global__ void activationFuncDevice(float *d_Z, float *d_Y, int numRows, int numCols)
+__global__ void activationFuncForwardDevice(float *d_Z, float *d_Y, int numRows, int numCols)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -18,6 +18,19 @@ __global__ void activationFuncDevice(float *d_Z, float *d_Y, int numRows, int nu
         float z = d_Z[idx];
 
         d_Y[idx] = sigmoid(z);
+    }
+}
+
+__global__ void activationFuncBackwardDevice(float *d_Z, float *d_dervA, float *d_dervZ, int numRows, int numCols)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < numRows && col < numCols) {
+        int idx = col + row * numCols;
+        float s = sigmoid(d_Z[idx]);
+        
+        d_dervZ[idx] =  d_dervA[idx] * s * (1  - s) ;
     }
 }
 
@@ -51,7 +64,9 @@ __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRo
 // 
 // Interface functions for the corresponding kernel functions.
 //
-void activationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
+
+// h_Y will ahve the output
+void activationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols)
 {
     float *d_Z, *d_Y;
     cudaError_t cudaStatus;
@@ -74,7 +89,7 @@ void activationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
     dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
 
     // Call the kernel
-    activationFuncDevice<<<gridDim, blockDim>>>(d_Z, d_Y, numRows, numCols);
+    activationFuncForwardDevice<<<gridDim, blockDim>>>(d_Z, d_Y, numRows, numCols);
 
     // Copy back to host
     cudaStatus = cudaMemcpy(h_Y, d_Y, numRows * numCols * sizeof(float), cudaMemcpyDeviceToHost);
@@ -83,6 +98,48 @@ void activationFunc(float *h_Z, float *h_Y, int numRows, int numCols)
     // Free device memory
     cudaFree(d_Z);
     cudaFree(d_Y);
+}
+
+// h_dervZ will have the output
+void activationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols)
+{
+    float *d_Z, *d_dervA, *d_dervZ;
+    cudaError_t cudaStatus;
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_Z, numRows * numCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_dervA, numRows * numCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    cudaStatus = cudaMalloc((void**)&d_dervZ, numRows * numCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_Z, h_Z, numRows * numCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_dervA, h_dervA, numRows * numCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+    
+    cudaStatus = cudaMemcpy(d_dervZ, h_dervZ, numRows * numCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+    
+    dim3 gridDim((int)ceil((float)numCols / BLOCK_WIDTH), (int)ceil((float)numRows / BLOCK_WIDTH), 1);
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+
+    // Call the kernel
+    activationFuncBackwardDevice<<<gridDim, blockDim>>>(d_Z, d_dervA, d_dervZ, numRows, numCols);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_dervZ, d_dervZ, numRows * numCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_Z);
+    cudaFree(d_dervA);
+    cudaFree(d_dervZ);
 }
 
 void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
