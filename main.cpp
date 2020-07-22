@@ -44,7 +44,7 @@ int testElementMult()
 
     memset(h_P, 0, ROWS * COLS * sizeof(float));
 
-    hostDotProduct(h_M, h_N, h_P, ROWS, COLS, ROWS, COLS);
+    hostElementMult(h_M, h_N, h_P, ROWS, COLS, ROWS, COLS);
 
     // print out the results
     printf("(TEST) matrix element multiplication on CPU:\n");
