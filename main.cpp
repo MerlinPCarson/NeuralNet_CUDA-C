@@ -20,6 +20,49 @@
   #define TEST_SIZE (10)
 #endif // TESTING
 
+int testElementMult()
+{
+    float *h_M, *h_N, *h_P;
+    int ROWS = 10, COLS = 5;
+
+    h_M = (float *)malloc(ROWS * COLS * sizeof(float));
+    h_N = (float *)malloc(ROWS * COLS * sizeof(float));
+    h_P = (float *)malloc(ROWS * COLS * sizeof(float));
+
+    if (h_M == NULL || h_N == NULL || h_P == NULL) {
+        printf("Host variable memory allocation failure\n");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            int id = j + COLS * i;
+            h_M[id] = 1;
+            h_N[id] = 2;
+        }
+    }
+
+    memset(h_P, 0, ROWS * COLS * sizeof(float));
+
+    hostDotProduct(h_M, h_N, h_P, ROWS, COLS, ROWS, COLS);
+
+    // print out the results
+    printf("(TEST) matrix element multiplication on CPU:\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            int id = j + i * COLS;
+            printf("%f ", h_P[id]);
+        }
+        printf("\n");
+    }
+
+    free(h_M);
+    free(h_N);
+    free(h_P);
+
+    return 0;
+}
+
 // Only called while testing dot product
 int testDotProduct()
 {
@@ -160,6 +203,7 @@ int main(int argc, char * argv[])
 #ifdef TEST_DOT_PRODUCT
   testDotProduct();
   testActivationFunc();
+  testElementMult();
 #endif
 
   	// init example data structs
