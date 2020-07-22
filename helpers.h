@@ -16,6 +16,9 @@ do {												\
   }												\
  } while(0)					
 
+
+void printMatrix(float *X, int numRows, int numCols);
+
 // display all cuda device
 int cudaDeviceProperties();
 void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);

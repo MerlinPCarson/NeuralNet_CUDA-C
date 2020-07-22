@@ -2,7 +2,11 @@
 #include <math.h>
 #include <random>
 #include "neural_net.h"
+#include "kernels.h"
+#include "helpers.h"
 
+
+//#define DEBUG
 
 NeuralNet::NeuralNet(){
 
@@ -71,15 +75,13 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   int numTrainBatches = floor(trainSet.size()/BATCH_SIZE);
   int numValBatches = floor(valSet.size()/BATCH_SIZE);
 
-  // model batch outputs
-  float output[BATCH_SIZE][NUM_LABELS];
-
   // losses
   float loss = 0.0;
   float valLoss = 0.0;
 
   int i, j;
 
+  // data struct for model's losses during training
   History history;
 
   // main training loop
@@ -96,7 +98,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       make_batch(batch, target, trainSet, order, j);
  
       // forward pass
-      // forward(batch, output);
+      forward(batch);
       
       // calculated errors
       // loss += error(target, output)/BATCH_SIZE;
@@ -113,7 +115,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       make_batch(batch, target, valSet, valOrder, j);
 
       // forward pass
-      // forward(batch, output);
+      forward(batch);
 
       // calculated errors
       // valLoss += error(target, output)/BATCH_SIZE;
@@ -150,10 +152,79 @@ void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vec
 
   // copy random order of training elements to contiguous batch
   for(int i = startIdx; i < endIdx; ++i){
-    memcpy(batch[pos], &dataSet[order[i]].value[0], NUM_FEATURES * sizeof(dataSet[0].value[0]));
+    memcpy(batch[pos], &dataSet[order[i]].value[0], (NUM_FEATURES) * sizeof(dataSet[0].value[0]));
     target[pos] = dataSet[order[i]].label;
     ++pos;
   }
+
+}
+
+// forward propagation of a batch of examples
+void NeuralNet::forward(float batch[][NUM_FEATURES]){
+
+    bool bPass = true;
+   
+    float h_P1[BATCH_SIZE][HIDDEN_SIZE];
+    float h_A1[BATCH_SIZE][HIDDEN_SIZE];
+
+    // Execute on CPU
+    hostDotProduct((float*)batch, (float*)hidden_weights, (float*)h_P1, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
+                        
+    // Execute on GPU
+    dotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
+
+#ifdef DEBUG
+    printf("Comparing hidden layer dot product:\n ");
+    printf("[HOST]\n");
+    printMatrix((float*)h_P1, BATCH_SIZE, HIDDEN_SIZE);
+    printf("[DEVICE]\n");
+    printMatrix((float*)hidden_signal, BATCH_SIZE, HIDDEN_SIZE);
+#endif // DEBUG
+  
+    // Execute on CPU
+    hostActivationFuncForward((float*)hidden_signal, (float*)h_A1, BATCH_SIZE, HIDDEN_SIZE);
+
+    // Execute on GPU
+    activationFuncForward((float*)hidden_signal, (float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
+
+#ifdef DEBUG
+    printf("Comparing hidden layer activations:\n ");
+    printf("[HOST]\n");
+    printMatrix((float*)h_A1, BATCH_SIZE, HIDDEN_SIZE);
+    printf("[DEVICE]\n");
+    printMatrix((float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
+#endif // DEBUG
+
+    float h_P2[BATCH_SIZE][HIDDEN_SIZE];
+    float h_A2[BATCH_SIZE][HIDDEN_SIZE];
+
+    // Execute on CPU
+    hostDotProduct((float*)hidden_activation, (float*)output_weights, (float*)h_P2, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
+                        
+    // Execute on GPU
+    dotProduct((float*)hidden_activation, (float*)output_weights, (float*)output_signal, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
+
+#ifdef DEBUG
+    printf("Comparing output layer dot product:\n ");
+    printf("[HOST]\n");
+    printMatrix((float*)h_P2, BATCH_SIZE, NUM_LABELS);
+    printf("[DEVICE]\n");
+    printMatrix((float*)output_signal, BATCH_SIZE, NUM_LABELS);
+#endif // DEBUG
+
+    // Execute on CPU
+    hostActivationFuncForward((float*)output_signal, (float*)h_A2, BATCH_SIZE, NUM_LABELS);
+
+    // Execute on GPU
+    activationFuncForward((float*)output_signal, (float*)output_activation, BATCH_SIZE, NUM_LABELS);
+
+#ifdef DEBUG
+    printf("Comparing hidden layer activations:\n ");
+    printf("[HOST]\n");
+    printMatrix((float*)h_A1, BATCH_SIZE, NUM_LABELS);
+    printf("[DEVICE]\n");
+    printMatrix((float*)hidden_activation, BATCH_SIZE, NUM_LABELS);
+#endif // DEBUG
 
 }
 
@@ -161,7 +232,7 @@ void NeuralNet::show_weights(){
 
   // display weights in hidden layer
   std::cout << "HIDDEN WEIGHTS:" << std::endl;
-  for(int i = 0; i < NUM_FEATURES+1; ++i){
+  for(int i = 0; i < NUM_FEATURES; ++i){
     for(int j = 0; j < HIDDEN_SIZE; ++j){
       std::cout << hidden_weights[i][j] << ' ';
     }
@@ -170,7 +241,7 @@ void NeuralNet::show_weights(){
 
   // display weights in output layer
   std::cout << "OUTPUT WEIGHTS:" << std::endl;
-  for(int i = 0; i < HIDDEN_SIZE+1; ++i){
+  for(int i = 0; i < HIDDEN_SIZE; ++i){
     for(int j = 0; j < NUM_LABELS; ++j){
       std::cout << output_weights[i][j] << ' ';
     }

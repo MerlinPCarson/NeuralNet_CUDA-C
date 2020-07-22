@@ -23,12 +23,12 @@ int testDotProduct()
 {
     float *h_M, *h_N, *h_P1, *h_P2;
     bool bPass = true;
-    int MAX_NUM_ROWS = 10, MAX_NUM_COLS = 10;
+    int MAX_NUM_ROWS = 10, MAX_NUM_COLS = 785;
 
-    for (int num_MRows = 1; num_MRows <= MAX_NUM_ROWS; num_MRows++) {
-        for (int num_MCols = 1; num_MCols <= MAX_NUM_COLS; num_MCols++) {
+    for (int num_MRows = MAX_NUM_ROWS; num_MRows <= MAX_NUM_ROWS; num_MRows++) {
+        for (int num_MCols = MAX_NUM_COLS; num_MCols <= MAX_NUM_COLS; num_MCols++) {
                 int num_NRows = num_MCols;
-                for (int num_NCols = 1; num_NCols <= MAX_NUM_COLS; num_NCols++) {
+                for (int num_NCols = 10; num_NCols <= 10; num_NCols++) {
                         
                         // Allocate memory for host variables
                         h_M = (float *)malloc(num_MRows * num_MCols * sizeof(float));
