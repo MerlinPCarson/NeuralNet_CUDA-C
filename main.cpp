@@ -11,7 +11,7 @@
 #include "helpers.h"
 
 // If TESTING macro is uncommented, load a subset of dataset 
-#define TESTING
+//#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
@@ -22,8 +22,6 @@
 
 int main(int argc, char * argv[])
 {
-  // time program started 
-  auto start = std::chrono::steady_clock::now();
 
   // set random seed
   srand(time(NULL));
@@ -62,6 +60,9 @@ int main(int argc, char * argv[])
 
   // instantiate neural network with learning rate
   NeuralNet model = NeuralNet(0.01);
+
+  // time program started 
+  auto start = std::chrono::steady_clock::now();
 
   // main training loop
   int numEpochs = 2;
