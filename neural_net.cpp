@@ -40,9 +40,9 @@ void NeuralNet::init_weights(){
   }
 
   // init bias weight to 0 for each neuron in hidden layer
-  for(int i = 0; i < HIDDEN_SIZE; ++i){
-      hidden_weights[NUM_FEATURES][i] = 0;
-  }
+//  for(int i = 0; i < HIDDEN_SIZE; ++i){
+//      hidden_weights[NUM_FEATURES][i] = 0;
+//  }
 
   // init output layer weights
   limit = sqrt(6.0 / (HIDDEN_SIZE + NUM_LABELS));
@@ -55,9 +55,9 @@ void NeuralNet::init_weights(){
   }
   
   // init bias weight to 0 for each neuron in output layer
-  for(int i = 0; i < NUM_LABELS; ++i){
-      output_weights[HIDDEN_SIZE][i] = 0.0;
-  }
+//  for(int i = 0; i < NUM_LABELS; ++i){
+//      output_weights[HIDDEN_SIZE][i] = 0.0;
+//  }
 
 }
 
