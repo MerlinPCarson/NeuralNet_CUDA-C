@@ -7,6 +7,7 @@
 
 
 //#define DEBUG
+#define USE_GPU
 
 NeuralNet::NeuralNet(){
 
@@ -17,8 +18,10 @@ NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
   // initialize all layer weights
   init_weights();
 
+#ifdef DEBUG
   // display all layer weights
   show_weights();
+#endif // DEBUG
 
 }
 
@@ -86,7 +89,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
 
   // main training loop
   for(i = 0; i < num_epochs; ++i){
-    std::cout << "\nEpoch: " << i << std::endl << std::endl;
+    std::cout << "\nEpoch: " << i + 1 << '/' << num_epochs << std::endl << std::endl;
 
     // train
     for(j = 0; j < numTrainBatches; ++j){
@@ -162,68 +165,22 @@ void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vec
 // forward propagation of a batch of examples
 void NeuralNet::forward(float batch[][NUM_FEATURES]){
 
-    bool bPass = true;
-   
-    float h_P1[BATCH_SIZE][HIDDEN_SIZE];
-    float h_A1[BATCH_SIZE][HIDDEN_SIZE];
-
-    // Execute on CPU
-    hostDotProduct((float*)batch, (float*)hidden_weights, (float*)h_P1, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
-                        
-    // Execute on GPU
+#ifdef USE_GPU
     dotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
-
-#ifdef DEBUG
-    printf("Comparing hidden layer dot product:\n ");
-    printf("[HOST]\n");
-    printMatrix((float*)h_P1, BATCH_SIZE, HIDDEN_SIZE);
-    printf("[DEVICE]\n");
-    printMatrix((float*)hidden_signal, BATCH_SIZE, HIDDEN_SIZE);
-#endif // DEBUG
-  
-    // Execute on CPU
-    hostActivationFuncForward((float*)hidden_signal, (float*)h_A1, BATCH_SIZE, HIDDEN_SIZE);
-
-    // Execute on GPU
     activationFuncForward((float*)hidden_signal, (float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
-
-#ifdef DEBUG
-    printf("Comparing hidden layer activations:\n ");
-    printf("[HOST]\n");
-    printMatrix((float*)h_A1, BATCH_SIZE, HIDDEN_SIZE);
-    printf("[DEVICE]\n");
-    printMatrix((float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
-#endif // DEBUG
-
-    float h_P2[BATCH_SIZE][HIDDEN_SIZE];
-    float h_A2[BATCH_SIZE][HIDDEN_SIZE];
-
-    // Execute on CPU
-    hostDotProduct((float*)hidden_activation, (float*)output_weights, (float*)h_P2, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
-                        
-    // Execute on GPU
     dotProduct((float*)hidden_activation, (float*)output_weights, (float*)output_signal, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
-
-#ifdef DEBUG
-    printf("Comparing output layer dot product:\n ");
-    printf("[HOST]\n");
-    printMatrix((float*)h_P2, BATCH_SIZE, NUM_LABELS);
-    printf("[DEVICE]\n");
-    printMatrix((float*)output_signal, BATCH_SIZE, NUM_LABELS);
-#endif // DEBUG
-
-    // Execute on CPU
-    hostActivationFuncForward((float*)output_signal, (float*)h_A2, BATCH_SIZE, NUM_LABELS);
-
-    // Execute on GPU
     activationFuncForward((float*)output_signal, (float*)output_activation, BATCH_SIZE, NUM_LABELS);
+#else
+    hostDotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
+    hostActivationFuncForward((float*)hidden_signal, (float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
+    hostDotProduct((float*)hidden_activation, (float*)output_weights, (float*)output_signal, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
+    hostActivationFuncForward((float*)output_signal, (float*)output_activation, BATCH_SIZE, NUM_LABELS);
+#endif
 
 #ifdef DEBUG
-    printf("Comparing hidden layer activations:\n ");
-    printf("[HOST]\n");
-    printMatrix((float*)h_A1, BATCH_SIZE, NUM_LABELS);
-    printf("[DEVICE]\n");
-    printMatrix((float*)hidden_activation, BATCH_SIZE, NUM_LABELS);
+    printf("Printing output activations:\n");
+    printMatrix((float*)output_activation, BATCH_SIZE, NUM_LABELS);
+    printf("\n");
 #endif // DEBUG
 
 }

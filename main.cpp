@@ -56,13 +56,8 @@ int main(int argc, char * argv[])
   std::cout << "Size of test set: " << testData.size() << std::endl;
 
 #ifdef TESTING
-  // print random digit from each dataset
-  print_digit(trainSet[0].value, trainSet[0].label);
-  print_digit(trainSet[trainSet.size()-1].value, trainSet[trainSet.size()-1].label);
-  print_digit(valSet[0].value, valSet[0].label);
-  print_digit(valSet[valSet.size()-1].value, valSet[valSet.size()-1].label);
-  print_digit(testData[0].value, testData[0].label);
-  print_digit(testData[testSize-1].value, testData[testSize-1].label);
+  // print first and last digit from each dataset
+  testDatasets(trainSet, valSet, testData);
 #endif // TESTING
 
   // instantiate neural network with learning rate
@@ -70,6 +65,7 @@ int main(int argc, char * argv[])
 
   // main training loop
   int numEpochs = 2;
+  std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, numEpochs);
 
   // total time to run program 

@@ -3,6 +3,23 @@
 #include <math.h>
 
 
+// verify digits were correctly loaded into dataset
+void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData)
+{
+  printf("\nFirst digit in training set\n");
+  print_digit(trainSet[0].value, trainSet[0].label);
+  printf("\nLast digit in training set\n");
+  print_digit(trainSet[trainSet.size()-1].value, trainSet[trainSet.size()-1].label);
+  printf("\nFirst digit in validation set\n");
+  print_digit(valSet[0].value, valSet[0].label);
+  printf("\nLast digit in validation set\n");
+  print_digit(valSet[valSet.size()-1].value, valSet[valSet.size()-1].label);
+  printf("\nFirst digit in test set\n");
+  print_digit(testData[0].value, testData[0].label);
+  printf("\nLast digit in test set\n");
+  print_digit(testData[testData.size()-1].value, testData[testData.size()-1].label);
+}
+
 void printMatrix(float *X, int numRows, int numCols)
 {
     for (int i = 0; i < numRows; i++) {
