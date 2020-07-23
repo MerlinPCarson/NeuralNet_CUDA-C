@@ -8,6 +8,20 @@ __device__ float sigmoid(float z)
     return y;
 }
 
+__global__ void elementMultDevice(float *d_M, float *d_N, float *d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+{
+    int num_PRows = num_MRows;
+    int num_PCols = num_MCols;
+
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < num_PRows && col < num_PCols) {
+        int idx = col + row * num_PCols;
+        d_P[idx] = d_M[idx] * d_N[idx];
+    }
+}
+
 __global__ void activationFuncForwardDevice(float *d_Z, float *d_Y, int numRows, int numCols)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -179,6 +193,59 @@ void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols
 
     // Call the kernel
     dotProductDevice<<<gridDim, blockDim>>>(d_M, d_N, d_P, num_MRows, num_MCols, num_NRows, num_NCols);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_P, d_P, num_PRows * num_PCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_M);
+    cudaFree(d_N);
+    cudaFree(d_P);
+}
+
+void elementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
+{
+    float *d_M, *d_N, *d_P;
+    cudaError_t cudaStatus;
+    int num_PRows = num_MRows;
+    int num_PCols = num_MCols;
+
+    if (num_MRows != num_NRows) {
+        printf("(device) num_MRows!= num_NRows\n");
+        exit(-1);
+    }
+
+    if (num_MCols != num_NCols) {
+        printf("(device) num_MCols != num_NCols\n");
+        exit(-1);
+    }
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_M, num_MRows * num_MCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_N, num_NRows * num_NCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_P, num_PRows * num_PCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_M, h_M, num_MRows * num_MCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_N, h_N, num_NRows * num_NCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_P, h_P, num_PRows * num_PCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    dim3 gridDim((int)ceil((float)num_PCols / BLOCK_WIDTH), (int)ceil((float)num_PRows / BLOCK_WIDTH), 1);
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+
+    // Call the kernel
+    elementMultDevice<<<gridDim, blockDim>>>(d_M, d_N, d_P, num_MRows, num_MCols, num_NRows, num_NCols);
 
     // Copy back to host
     cudaStatus = cudaMemcpy(h_P, d_P, num_PRows * num_PCols * sizeof(float), cudaMemcpyDeviceToHost);
