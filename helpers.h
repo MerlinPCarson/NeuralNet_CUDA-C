@@ -21,5 +21,6 @@ do {												\
 // display all cuda device
 int cudaDeviceProperties();
 void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
+void transpose(float* A, int rows, int cols, float* &B);
 
 #endif // HELPERS_H

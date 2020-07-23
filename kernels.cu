@@ -57,7 +57,7 @@ __global__ void scalarMultiplication(double scalar, double* M, int Rows, int Col
 
 
 
-__global__ void updateWeights(double* w, float eta, float* error, float* layer, float alpha, int Rows, int Cols){
+__global__ void updateWeights(double* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols){
     /*
         w -- set of weights being updated
         error -- the error by which the weights need to be updated
@@ -67,7 +67,7 @@ __global__ void updateWeights(double* w, float eta, float* error, float* layer, 
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
-    if(r < Rows && c < MCols)
-        w[r][c] = eta * error[r][c] * layer + alpha * w[r][c]
+    if(r < Rows && c < Cols)
+        d_w[r][c] = eta * d_dotP + alpha * d_w[r][c]
 
 }

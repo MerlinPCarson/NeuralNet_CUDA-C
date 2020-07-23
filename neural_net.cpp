@@ -96,12 +96,72 @@ void NeuralNet::show_weights(){
     * layer -- can be the output-to-hidden layer OR the hidden-to-input layer
     * input -- determines which error and layer is used to update the weights
     */
+    double* w;
+    float* error;
+    int weightRows, weightCols, layerRows, layerCols, error_size;
+    if(input){
+      w = this.hidde_weights;       // 785x10
+      error = this.hidde_error;     // 1x10 (HIDDEN SIZE)
+      error_size = HIDDEN_SIZE;
+      weightRows = NUM_FEATURES+1;  // 785
+      weightCols = HIDDEN_SIZE;     // 10
+      layerRows = 1;                // FIXME
+      layerCols = HIDDEN_SIZE;     // TODO double check layer dimensions
+    }else{
+      w = this.output_weights;      // 11x10
+      error = this.output_error;    // 1x10  (OUTPUT LABELS)
+      error_size = NUM_LABELS;      // 10
+      weightRows = HIDDEN_SIZE+1;   // 11
+      weightCols = NUM_LABELS       // 10
+      layerRows = 1;                // FIXME
+      layerCols = NUM_FEATURES;     // TODO double check layer dimensions
+    }
 
-    double* w = (input) ? this.hidde_weights : this.output_weights;
+    float* errorTransposed;
+    tranpose(error, 1, error_size, errorTransposed);
 
-    // call dot product to then call the kernel version
+
+    //--------------  DEEIVCE Prep ----------------------
+    double* d_w;
+    float *d_error, *d_layer, *d_dotP;
+
+    
+    cudaStatus = cudaMalloc((void**)&d_w, weightRows * weightCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_w, w, weightRows * weightCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_layer, layerRows * lahyerCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_layer, layer, layerRows * lahyerCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+
+    cudaStatus = cudaMalloc((void**)&d_error, error_size * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_error, errorTransposed, error_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_dotP, error_size * layerCols sizeof(float));
+    cudaCheckError(cudaStatus);
+
 
     // call kernel for weight update for each thread to update a weight
+    int blockX = ceil(weightCols/2);
+    int blockY = ceil(weightRows/2);
+    int threadX = BLOCK_WIDTH;
+    int threadY = BLOCK_WIDTH;
+    dim3 dimGrid(blockX,   blockY,  1);
+    dim3 dimBlock(threadX, threadY, 1);
+    //--------------  END: DEEIVCE Prep ----------------------
+
+    
+    // d_dotP's dimeninsions will be     layerCols x error_size
+    dotProduct(d_layer, d_error, d_dotP, layerRows, layerCols, 1, error_size);
+                            
+                            // output-hidden    (1x10) hidden activations  DOT  error(1x10)
+                            // hidden-input     (1x785) inputs  DOT  error(1x10) 
+    updateWeights <<< dimGrid, dimBlock >>>(d_w, eta, d_dotP, alpha, layerCols, error_size );
 
 
   }

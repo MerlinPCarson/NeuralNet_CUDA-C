@@ -26,9 +26,11 @@ class NeuralNet{
 
         float eta;            // learning rate
         float alpha;          // momentum
+        float output_error[NUM_LABELS];   // output-to-hidden error 2 Layer NN
+        float hidden_error[HIDDEN_SIZE];   // hidden-to-input error  2 Layer NN
 
         double hidden_weights[NUM_FEATURES+1][HIDDEN_SIZE];    // hidden layer weights
-        double output_weights[HIDDEN_SIZE+1][NUM_LABELS];   // output layer weights
+        double output_weights[HIDDEN_SIZE+1][NUM_LABELS];      // output layer weights
 
 };
     

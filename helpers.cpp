@@ -58,4 +58,11 @@ int cudaDeviceProperties(){
   return 1;
 }
 
+void transpose(float* A, int rows, int cols, float* &B){
+  B = (float*)malloc(rows*cols*sizeof(float));
+
+   for (int i = 0; i < rows; ++i)
+      for (int j = 0; j < columns; ++j) 
+         B[j][i] = A[i][j];
+}
 
