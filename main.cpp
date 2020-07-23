@@ -11,7 +11,7 @@
 #include "helpers.h"
 
 // If TESTING macro is uncommented, load a subset of dataset 
-//#define TESTING
+#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)

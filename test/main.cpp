@@ -8,16 +8,6 @@
 #include "kernels.h"
 #include "helpers.h"
 
-void printMatrix(float *X, int numRows, int numCols)
-{
-    for (int i = 0; i < numRows; i++) {
-        for (int j = 0; j < numCols; j++) {
-            int id = j + i * numCols;
-            printf("%f ", X[id]);
-        }
-        printf("\n");
-    }
-}
 
 int testDotProduct()
 {
@@ -242,6 +232,80 @@ int testActivationFuncBackward()
     return 0;
 }
 
+int testElementMult()
+{
+    float *h_M, *h_N, *h_P1, *h_P2;
+    bool bPass = true;
+    int MAX_NUM_ROWS = 10, MAX_NUM_COLS = 10;
+
+    for (int numRows = 1; numRows <= MAX_NUM_ROWS; numRows++) {
+        for (int numCols = 1; numCols <= MAX_NUM_COLS; numCols++) {
+                    
+            // Allocate memory for host variables
+            h_M = (float *)malloc(numRows * numCols * sizeof(float));
+            h_N = (float *)malloc(numRows * numCols * sizeof(float));
+            h_P1 = (float *)malloc(numRows * numCols * sizeof(float));
+            h_P2 = (float *)malloc(numRows * numCols * sizeof(float));
+            
+            if (h_M == NULL || h_N == NULL || h_P1 == NULL || h_P2 == NULL) {
+                printf("Host variable memory allocation failure\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // load arrays with some numbers
+            for (int i = 0; i < numRows; i++) {
+                for (int j = 0; j < numCols; j++) {
+                    int id = j + numCols * i;
+                    
+                    // Depending on the values there might be differences int he higher decimal places
+                    // Hence assigning the same value.
+                    h_M[id] = id;
+                    h_N[id] = id;
+                }
+            }
+
+            // Execute on CPU
+            hostElementMult(h_M, h_N, h_P1, numRows, numCols, numRows, numCols);
+
+            // Execute on GPU
+            elementMult(h_M, h_N, h_P2, numRows, numCols, numRows, numCols);
+
+            // Compare the GPU results with the CPU results
+            for (int i = 0; bPass && i < numRows; i++) {
+                for (int j = 0; bPass && j < numCols; j++) {
+                    int id = j + i * numCols;
+                    if (h_P1[id] != h_P2[id]) {
+                        bPass = false;
+                    }
+                }
+            }
+
+            if (!bPass) {
+                printf("FAIL: element multiplication func (row/col): [%d/%d] x [%d/%d]\n", numRows, numCols, numRows, numCols);
+                printf("---element multiplication CPU:---\n");
+                printMatrix(h_P1, numRows, numCols);
+                printf("------\n\n");
+                printf("---element multiplication on GPU:---\n");
+                printMatrix(h_P2, numRows, numCols);
+                printf("------\n\n");
+                return -1;
+            }
+
+            free(h_M);
+            free(h_N);
+            free(h_P1);
+            free(h_P2);
+            
+            printf("*** PASS: element multiplication func (row/col): [%d/%d] x [%d/%d] ***\n", numRows, numCols, numRows, numCols);
+
+        }
+    }
+    
+    printf("*** All tests PASSED: element multiplication func ***\n");
+    return 0;
+
+}
+
 int main(int argc, char * argv[])
 {
   // identify cuda devices
@@ -252,6 +316,7 @@ int main(int argc, char * argv[])
   testDotProduct();
   testActivationFuncForward();
   testActivationFuncBackward();
+  testElementMult();
 
   return 0;
 }

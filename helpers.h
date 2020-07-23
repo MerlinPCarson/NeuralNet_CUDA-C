@@ -22,6 +22,7 @@ void printMatrix(float *X, int numRows, int numCols);
 void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
 
 // display all cuda device
+void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 int cudaDeviceProperties();
 void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);

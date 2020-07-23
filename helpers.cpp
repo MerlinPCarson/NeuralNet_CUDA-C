@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include "helpers.h"
 #include <math.h>
+#include "helpers.h"
+#include "data.h"
 
 
 // verify digits were correctly loaded into dataset
@@ -28,6 +29,24 @@ void printMatrix(float *X, int numRows, int numCols)
             printf("%f ", X[id]);
         }
         printf("\n");
+    }
+}
+
+void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols){
+    
+    int num_PRows = num_MRows;
+    int num_PCols = num_MCols;
+
+    if(num_MRows != num_NRows || num_MCols != num_NCols) {
+        printf("matrix dimensions don't match!");
+        exit(-1);
+    }
+
+    for (int i = 0; i < num_PRows; i++) {
+        for (int j = 0; j < num_PCols; j++) {
+            int idx = j + i * num_PCols;
+            h_P[idx] = h_M[idx] * h_N[idx];
+        }
     }
 }
 
