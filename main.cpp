@@ -20,99 +20,6 @@
   #define TEST_SIZE (10)
 #endif // TESTING
 
-// Only called while testing dot product
-int testDotProduct()
-{
-    float *d_M, *d_N, *d_P;
-    float *h_M, *h_N, *h_P;
-    int ROWS = 10, COLS = 10;
-    cudaError_t cudaStatus;
-
-    // Allocate memory for host variables
-    h_M = (float *)malloc(ROWS * COLS * sizeof(float));
-    h_N = (float *)malloc(ROWS * COLS * sizeof(float));
-    h_P = (float *)malloc(ROWS * ROWS * sizeof(float));
-    if (h_M == NULL || h_N == NULL || h_P == NULL) {
-        printf("Host variable memory allocation failure\n");
-        exit(EXIT_FAILURE);
-    }
-
-    // Allocate memory for device variables
-    cudaStatus = cudaMalloc((void**)&d_M, ROWS * COLS * sizeof(float));
-    cudaCheckError(cudaStatus);
-
-    cudaStatus = cudaMalloc((void**)&d_N, ROWS * COLS * sizeof(float));
-    cudaCheckError(cudaStatus);
-
-    cudaStatus = cudaMalloc((void**)&d_P, ROWS * ROWS * sizeof(float));
-    cudaCheckError(cudaStatus);
-
-    // load arrays with some numbers
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLS; j++) {
-            int id = j + COLS * i;
-            h_M[id] = 1;
-        }
-    }
-
-    for (int i = 0; i < COLS; i++) {
-        for (int j = 0; j < ROWS; j++) {
-            int id = j + ROWS * i;
-            h_N[id] = 1;
-        }
-    }
-    memset(h_P, 0, ROWS * ROWS * sizeof(float));
-
-    // Execute on CPU
-    hostDotProduct(h_M, h_N, h_P, ROWS, COLS, COLS, ROWS);
-
-    // print out the results
-    printf("(TEST) dot product on CPU:\n");
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < ROWS; j++) {
-            int id = j + i * ROWS;
-            printf("%f ", h_P[id]);
-        }
-        printf("\n");
-    }
-
-    // Copy data to GPU
-    cudaStatus = cudaMemcpy(d_M, h_M, ROWS * COLS * sizeof(float), cudaMemcpyHostToDevice);
-    cudaCheckError(cudaStatus);
-
-    cudaStatus = cudaMemcpy(d_N, h_M, ROWS * COLS * sizeof(float), cudaMemcpyHostToDevice);
-    cudaCheckError(cudaStatus);
-
-    cudaStatus = cudaMemcpy(d_P, h_M, ROWS * ROWS * sizeof(float), cudaMemcpyHostToDevice);
-    cudaCheckError(cudaStatus);
-
-    // Execute on GPU
-    dotProduct(d_M, d_N, d_P, ROWS, COLS, COLS, ROWS);
-
-    // Copy back to host
-    cudaStatus = cudaMemcpy(h_P, d_P, ROWS * ROWS * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaCheckError(cudaStatus);
-
-    printf("(TEST) dot product on GPU:\n");
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < ROWS; j++) {
-            int id = j + i * ROWS;
-            printf("%f ", h_P[id]);
-        }
-        printf("\n");
-    }
-
-    cudaFree(d_M);
-    cudaFree(d_N);
-    cudaFree(d_P);
-
-    free(h_M);
-    free(h_N);
-    free(h_P);
-
-    return 0;
-}
-
 int main(int argc, char * argv[])
 {
   // time program started 
@@ -130,17 +37,13 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-#ifdef TEST_DOT_PRODUCT
-  testDotProduct();
-#endif
-
-  	// init example data structs
+    // init example data structs
   std::vector<Data> trainData(trainSize);
   std::vector<Data> testData(testSize);
 
-	// load training and test data from csv file
-	load_csv(trainData, TRAIN_DATA, trainSize);
-	load_csv(testData, TEST_DATA, testSize);
+  // load training and test data from csv file
+  load_csv(trainData, TRAIN_DATA, trainSize);
+  load_csv(testData, TEST_DATA, testSize);
 
   // split training data into training and validation sets
   std::vector<Data>  trainSet;
@@ -154,19 +57,20 @@ int main(int argc, char * argv[])
 
 #ifdef TESTING
   // print random digit from each dataset
-  print_digit(trainSet[0]);
-  print_digit(trainSet[rand()%trainSet.size()]);
-  print_digit(trainSet[trainSet.size()-1]);
-  print_digit(valSet[0]);
-  print_digit(valSet[rand()%valSet.size()]);
-  print_digit(valSet[valSet.size()-1]);
-  print_digit(testData[0]);
-  print_digit(testData[rand()%testSize]);
-  print_digit(testData[testSize-1]);
+  print_digit(trainSet[0].value, trainSet[0].label);
+  print_digit(trainSet[trainSet.size()-1].value, trainSet[trainSet.size()-1].label);
+  print_digit(valSet[0].value, valSet[0].label);
+  print_digit(valSet[valSet.size()-1].value, valSet[valSet.size()-1].label);
+  print_digit(testData[0].value, testData[0].label);
+  print_digit(testData[testSize-1].value, testData[testSize-1].label);
 #endif // TESTING
 
   // instantiate neural network with learning rate
   NeuralNet model = NeuralNet(0.01);
+
+  // main training loop
+  int numEpochs = 2;
+  History history = model.fit(trainSet, valSet, numEpochs);
 
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
@@ -174,3 +78,4 @@ int main(int argc, char * argv[])
 
   return 0;
 }
+

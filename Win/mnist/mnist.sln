@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30225.117
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mnist", "mnist.vcxproj", "{A64CA107-80CC-41CD-B4B4-24D1955FED77}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mnist_test", "..\..\test\Win\mnist_test\mnist_test.vcxproj", "{2B6D045E-D6CB-48F1-B8C6-95CEF7E2EA75}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -15,6 +17,10 @@ Global
 		{A64CA107-80CC-41CD-B4B4-24D1955FED77}.Debug|x64.Build.0 = Debug|x64
 		{A64CA107-80CC-41CD-B4B4-24D1955FED77}.Release|x64.ActiveCfg = Release|x64
 		{A64CA107-80CC-41CD-B4B4-24D1955FED77}.Release|x64.Build.0 = Release|x64
+		{2B6D045E-D6CB-48F1-B8C6-95CEF7E2EA75}.Debug|x64.ActiveCfg = Debug|x64
+		{2B6D045E-D6CB-48F1-B8C6-95CEF7E2EA75}.Debug|x64.Build.0 = Debug|x64
+		{2B6D045E-D6CB-48F1-B8C6-95CEF7E2EA75}.Release|x64.ActiveCfg = Release|x64
+		{2B6D045E-D6CB-48F1-B8C6-95CEF7E2EA75}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
