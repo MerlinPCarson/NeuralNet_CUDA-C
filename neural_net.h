@@ -26,7 +26,7 @@ class NeuralNet{
 
         void init_weights();
         void show_weights();
-        void loss_function(int, double*, double*, double* &, double* &);
+        void loss_function(int, float*, float*, float* &output_error, float* &hidden_error);
         void update_weights();
 
         // need softmax function

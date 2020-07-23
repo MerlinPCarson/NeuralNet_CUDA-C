@@ -177,7 +177,7 @@ void NeuralNet::show_weights(){
     std::cout << std::endl;
   }
 
-  void NeuralNet::loss_function(int t, double* o, double* h, double* &delta_k, double* &delta_j){
+  void NeuralNet::loss_function(int t, float* o, float* h, float* &delta_k, float* &delta_j){
     /* t       -- target label 
        o       -- output activations
        h       -- hidden actications
@@ -193,23 +193,23 @@ void NeuralNet::show_weights(){
 
   }
 
-  void NeuralNet::update_weights(double* error, double* layer, bool input){
+  void NeuralNet::update_weights(float* error, float* layer, bool input){
     /*
     * error -- the error to update the weights
     * layer -- can be the output-to-hidden layer OR the hidden-to-input layer
     * input -- determines which error and layer is used to update the weights
     */
-    double* w;
-    float* error;
+    
+    float *error, *w;
     int weightRows, weightCols, layerRows, layerCols, error_size;
     if(input){
-      w = this.hidde_weights;       // 785x10
-      error = this.hidde_error;     // 1x10 (HIDDEN SIZE)
+      w = this.hidden_weights;      // 785x10
+      error = this.hidden_error;    // 1x10 (HIDDEN SIZE)
       error_size = HIDDEN_SIZE;
       weightRows = NUM_FEATURES+1;  // 785
       weightCols = HIDDEN_SIZE;     // 10
       layerRows = 1;                // FIXME
-      layerCols = HIDDEN_SIZE;     // TODO double check layer dimensions
+      layerCols = HIDDEN_SIZE;      // TODO double check layer dimensions
     }else{
       w = this.output_weights;      // 11x10
       error = this.output_error;    // 1x10  (OUTPUT LABELS)
@@ -225,8 +225,7 @@ void NeuralNet::show_weights(){
 
 
     //--------------  DEEIVCE Prep ----------------------
-    double* d_w;
-    float *d_error, *d_layer, *d_dotP;
+    float *d_w, *d_error, *d_layer, *d_dotP;
 
     
     cudaStatus = cudaMalloc((void**)&d_w, weightRows * weightCols * sizeof(float));
@@ -265,7 +264,12 @@ void NeuralNet::show_weights(){
                             // output-hidden    (1x10) hidden activations  DOT  error(1x10)
                             // hidden-input     (1x785) inputs  DOT  error(1x10) 
     updateWeights <<< dimGrid, dimBlock >>>(d_w, eta, d_dotP, alpha, layerCols, error_size );
-
+     
+     // deallocate device memory
+    cudaFree(d_w);
+    cudaFree(d_error);
+    cudaFree(d_layer);
+    cudaFree(d_dotP);
 
   }
 }

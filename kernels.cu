@@ -268,7 +268,7 @@ __global__ void scalarMultiplication(double scalar, double* M, int Rows, int Col
 
 
 
-__global__ void updateWeights(double* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols){
+__global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols){
     /*
         w -- set of weights being updated
         error -- the error by which the weights need to be updated
