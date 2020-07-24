@@ -8,16 +8,6 @@
 #include "kernels.h"
 #include "helpers.h"
 
-void printMatrix(float *X, int numRows, int numCols)
-{
-    for (int i = 0; i < numRows; i++) {
-        for (int j = 0; j < numCols; j++) {
-            int id = j + i * numCols;
-            printf("%f ", X[id]);
-        }
-        printf("\n");
-    }
-}
 
 int testDotProduct()
 {

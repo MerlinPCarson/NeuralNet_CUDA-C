@@ -1,6 +1,6 @@
 NVCC=nvcc
 EXE=mnist_test
-SOURCE=main.cpp ../kernels.cu ../helpers.cpp
+SOURCE=main.cpp ../kernels.cu ../helpers.cpp ../data.cpp
 INC=-I ../
 
 all: 

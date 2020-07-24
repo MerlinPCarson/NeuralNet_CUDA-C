@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
+#include "data.h"
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
@@ -15,6 +16,10 @@ do {												\
     exit(EXIT_FAILURE);										\
   }												\
  } while(0)					
+
+
+void printMatrix(float *X, int numRows, int numCols);
+void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
 
 // display all cuda device
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);

@@ -29,7 +29,7 @@ void load_csv(std::vector<Data> &data, std::string data_file, int size){
         }
 
     // bias term
-    data[i].value[NUM_FEATURES] = 1;
+    //data[i].value[NUM_FEATURES] = 1;
     }
 
     csv_file.close();
