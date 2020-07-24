@@ -41,9 +41,21 @@ void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int 
     for (int i = 0; i < numRows; i++) {
         for (int j = 0; j < numCols; j++) {
             int idx = j + i * numCols;
-	        float s = hostSigmoid(h_Z[idx]);
-		
-			h_dervZ[idx] =  h_dervA[idx] * s * (1  - s) ;
+            float s = hostSigmoid(h_Z[idx]);
+        
+            h_dervZ[idx] =  h_dervA[idx] * s * (1  - s) ;
+        }
+    }
+}
+
+void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols)
+{
+    for (int i = 0; i < num_MRows; i++) {
+        for (int j = 0; j < num_MCols; j++) {
+            int m_idx = j + i * num_MCols;
+            int n_idx = i + j * num_MRows;
+            
+            h_N[n_idx] = h_M[m_idx] ;
         }
     }
 }
