@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\data.cpp" />
     <ClCompile Include="..\..\..\helpers.cpp" />
     <ClCompile Include="..\..\main.cpp" />
   </ItemGroup>
