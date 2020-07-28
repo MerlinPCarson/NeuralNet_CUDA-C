@@ -278,8 +278,10 @@ __global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha,
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
-    if(r < Rows && c < Cols)
-        d_w[r][c] = eta * d_dotP + alpha * d_w[r][c]
+    if(r < Rows && c < Cols){
+        int index = r*Cols + c;
+        d_w[index] = eta * d_dotP + alpha * d_w[index];
+    }
 
 }
 
@@ -295,27 +297,29 @@ __global__ void outputError(float* d_error, float* target, float* out_layer, int
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
     if(r < Rows && c < Cols){ 
-        // 1x10           1x10                   1x10              1x10        1x10
-        d_error[r][c] = out_layer[r][c] * (1 - out_layer[r][c]) * (target - out_layer[r][c]);
+        int index = r*Cols + c;
+        // 1x10               1x10                    1x10               1x10              1x10
+        d_error[index] = out_layer[index] * (1 - out_layer[index]) * (target[index] - out_layer[index]);
     }
-
+    
 }
 
 
 __global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols){
     /*
-        d_error       -- delta_j    
-        outputUnits   -- the output error dot output weights
-        hidden_layer  -- the hidden activations
-        Rows          -- should be 1 as they are all 1D arrays
-        Cols          -- should be the number of ouput nodes 
+    d_error       -- delta_j    
+    outputUnits   -- the output error dot output weights
+    hidden_layer  -- the hidden activations
+    Rows          -- should be 1 as they are all 1D arrays
+    Cols          -- should be the number of ouput nodes 
     */
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
     if(r < Rows && c < Cols){
-        // 1x10             1x10                     1x10                  1x10
-        d_error[r][c] = hidden_layer[r][c] * (1 - hidden_layer[r][c]) * (outputUnits[r][c]);
+        int index = r*Cols + c;
+        // 1x10               1x10                      1x10                     1x10
+        d_error[index] = hidden_layer[index] * (1 - hidden_layer[index]) * (outputUnits[index]);
     }
 
 }

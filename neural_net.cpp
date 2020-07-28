@@ -184,6 +184,7 @@ void NeuralNet::show_weights(){
        delta_k -- output error 
        delta_j -- hidden error
     */
+   
     //--------------  DEEIVCE Prep ----------------------
     float *d_z, *d_h, *d_k, *d_j, *d_t;
     float *outputUnits; 
@@ -196,7 +197,6 @@ void NeuralNet::show_weights(){
     for(int i = 0; i < NUM_LABELS; ++i)
       targets[i] = (t==i) ? 0.9 : 0.1;
     
-    //--------------  DEEIVCE Prep ----------------------
     cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
     cudaCheckError(cudaStatus);
     cudaStatus = cudaMemcpy(d_z, z, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
@@ -235,22 +235,29 @@ void NeuralNet::show_weights(){
     dim3 dimGrid(blockX,   blockY,  1);
     dim3 dimBlock(threadX, threadY, 1);
     //--------------  END: DEEIVCE Prep ----------------------
+
     
     outputError <<< dimGrid, dimBlock >>>(delta_k, targets, z, outRows, outCols ); 
     
-    // output error dot output weights = outputUnits
-    //    1x10 @ 10x10  = 1x10
-    dotProduct(delta_k, outputError, outputUnits, outputRows, outputCols, 1, delta_k_size);
-
+    
+    // Prep for hidden error
     blockX = ceil(hiddenCols/2);
     blockY = ceil(hiddenRows/2);
     threadX = BLOCK_WIDTH;
     threadY = BLOCK_WIDTH;
     dim3 dimGrid(blockX,   blockY,  1);
     dim3 dimBlock(threadX, threadY, 1);
+    
+    // output error dot output weights = outputUnits
+    //    1x10 @ 10x10  = 1x10
+    dotProduct(delta_k, outputError, outputUnits, outputRows, outputCols, 1, delta_k_size);
     hiddenError <<< dimGrid, dimBlock >>>(delta_j, outputUnits, h, hiddenRows, hiddenCols );
 
-
+    // copy back to the host variables
+    cudaStatus = cudaMemcpy(delta_j, d_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(delta_k, d_k, outRows * outCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
 
     // deallocate device memory
     cudaFree(d_z);
@@ -334,6 +341,13 @@ void NeuralNet::show_weights(){
                             // output-hidden    (1x10) hidden activations  DOT  error(1x10)
                             // hidden-input     (1x785) inputs  DOT  error(1x10) 
     updateWeights <<< dimGrid, dimBlock >>>(d_w, eta, d_dotP, alpha, layerCols, error_size );
+
+    
+      // copy back to the host variables
+    cudaStatus = cudaMemcpy(w, d_w,  weightRows * weightCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+    
+    
      
      // deallocate device memory
     cudaFree(d_w);
