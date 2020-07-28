@@ -28,6 +28,6 @@ void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, 
 void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
 void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols);
 void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols);
-void hostMSE(float* h_T, float* h_O, float* batchLoss, int batchSize, int numLabels);
+float hostMSE(float* h_T, float* h_O, int batchSize, int numLabels);
 
 #endif // HELPERS_H
