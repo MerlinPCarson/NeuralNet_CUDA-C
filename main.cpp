@@ -69,6 +69,10 @@ int main(int argc, char * argv[])
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, numEpochs);
 
+  std::vector<int> preds;
+  std::vector<int> targets;
+  model.predict(testData, preds, targets);
+
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
   std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";

@@ -32,6 +32,10 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
+void hostBatchPreds(float* output_activations, int * batch_pred){
+
+}
+
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
 float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
