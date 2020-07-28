@@ -177,19 +177,89 @@ void NeuralNet::show_weights(){
     std::cout << std::endl;
   }
 
-  void NeuralNet::loss_function(int t, float* o, float* h, float* &delta_k, float* &delta_j){
+  void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j){
     /* t       -- target label 
-       o       -- output activations
+       z       -- output activations
        h       -- hidden actications
        delta_k -- output error 
        delta_j -- hidden error
     */
+    //--------------  DEEIVCE Prep ----------------------
+    float *d_z, *d_h, *d_k, *d_j, *d_t;
+    float *outputUnits; 
+    int outRows    = 1,  outCols    = NUM_LABELS;
+    int hiddenRows = 1,  hiddenCols = HIDDEN_SIZE;
+  
 
-    // need an element wise multiplication 
-    // output_error = output_activations *  (1 - output_activations) * (target - output_activations)
+    // one hot probabilistic  matrix
+    float targets[NUM_LABELS];
+    for(int i = 0; i < NUM_LABELS; ++i)
+      targets[i] = (t==i) ? 0.9 : 0.1;
+    
+    //--------------  DEEIVCE Prep ----------------------
+    cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_z, z, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
 
-    // TODO hidden_activations and the output_weights can not include the bias
-    // hidden_error = hidden_activations * (1 - hidden_activations) * [outut_error DOT output_weights]
+    cudaStatus = cudaMalloc((void**)&d_h, hiddenRows * hiddenCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_h, h, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+
+    cudaStatus = cudaMalloc((void**)&d_k, outRows * outCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_k, delta_k, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_j, hiddenRows * hiddenCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_j, delta_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_t,  NUM_LABELS * sizeof(float));
+    cudaCheckError(cudaStatus);
+    cudaStatus = cudaMemcpy(d_t, targets,  NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&outputUnits, outRows * hiddenCols sizeof(float));
+    cudaCheckError(cudaStatus);
+
+
+    // call kernel for weight update for each thread to update a weight
+    int blockX = ceil(outRows/2);
+    int blockY = ceil(outCols/2);
+    int threadX = BLOCK_WIDTH;
+    int threadY = BLOCK_WIDTH;
+    dim3 dimGrid(blockX,   blockY,  1);
+    dim3 dimBlock(threadX, threadY, 1);
+    //--------------  END: DEEIVCE Prep ----------------------
+    
+    outputError <<< dimGrid, dimBlock >>>(delta_k, targets, z, outRows, outCols ); 
+    
+    // output error dot output weights = outputUnits
+    //    1x10 @ 10x10  = 1x10
+    dotProduct(delta_k, outputError, outputUnits, outputRows, outputCols, 1, delta_k_size);
+
+    blockX = ceil(hiddenCols/2);
+    blockY = ceil(hiddenRows/2);
+    threadX = BLOCK_WIDTH;
+    threadY = BLOCK_WIDTH;
+    dim3 dimGrid(blockX,   blockY,  1);
+    dim3 dimBlock(threadX, threadY, 1);
+    hiddenError <<< dimGrid, dimBlock >>>(delta_j, outputUnits, h, hiddenRows, hiddenCols );
+
+
+
+    // deallocate device memory
+    cudaFree(d_z);
+    cudaFree(d_h);
+    cudaFree(d_k);
+    cudaFree(d_j);
+    cudaFree(d_t);
+    cudaFree(outputUnits);
+
 
   }
 
@@ -203,18 +273,18 @@ void NeuralNet::show_weights(){
     float *error, *w;
     int weightRows, weightCols, layerRows, layerCols, error_size;
     if(input){
-      w = this.hidden_weights;      // 785x10
+      w = this.hidden_weights;      // 784x10
       error = this.hidden_error;    // 1x10 (HIDDEN SIZE)
       error_size = HIDDEN_SIZE;
-      weightRows = NUM_FEATURES+1;  // 785
+      weightRows = NUM_FEATURES;    // 784
       weightCols = HIDDEN_SIZE;     // 10
       layerRows = 1;                // FIXME
       layerCols = HIDDEN_SIZE;      // TODO double check layer dimensions
     }else{
-      w = this.output_weights;      // 11x10
+      w = this.output_weights;      // 10x10
       error = this.output_error;    // 1x10  (OUTPUT LABELS)
       error_size = NUM_LABELS;      // 10
-      weightRows = HIDDEN_SIZE+1;   // 11
+      weightRows = HIDDEN_SIZE;     // 10
       weightCols = NUM_LABELS       // 10
       layerRows = 1;                // FIXME
       layerCols = NUM_FEATURES;     // TODO double check layer dimensions

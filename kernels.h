@@ -11,4 +11,9 @@ void activationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
 void dotProduct(float* d_M, float* d_N, float* d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 void elementMult(float *d_M, float *d_N, float *d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 
+// Backprop
+void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols);
+void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols);
+void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols);
+
 #endif // KERNELS_H

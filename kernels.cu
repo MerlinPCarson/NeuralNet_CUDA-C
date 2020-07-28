@@ -160,8 +160,8 @@ void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols
 {
     float *d_M, *d_N, *d_P;
     cudaError_t cudaStatus;
-    int num_PRows = num_MRows;
-    int num_PCols = num_NCols;
+    int num_PRows = num_MCols;
+    int num_PCols = num_NRows;
 
     if (num_MCols != num_NRows) {
         printf("(device) num_MCols != num_NRows\n");
@@ -280,5 +280,42 @@ __global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha,
     
     if(r < Rows && c < Cols)
         d_w[r][c] = eta * d_dotP + alpha * d_w[r][c]
+
+}
+
+__global__ void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols){
+    /*
+        d_error   -- delta_k
+        target    -- one hot encode 1D array containing 0.9 for target label
+        out_layer -- the squashed activations for the output layer
+        Rows      -- should be 1 as they are all 1D arrays
+        Cols      -- should be the number of ouput nodes 
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < Cols){ 
+        // 1x10           1x10                   1x10              1x10        1x10
+        d_error[r][c] = out_layer[r][c] * (1 - out_layer[r][c]) * (target - out_layer[r][c]);
+    }
+
+}
+
+
+__global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols){
+    /*
+        d_error       -- delta_j    
+        outputUnits   -- the output error dot output weights
+        hidden_layer  -- the hidden activations
+        Rows          -- should be 1 as they are all 1D arrays
+        Cols          -- should be the number of ouput nodes 
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < Cols){
+        // 1x10             1x10                     1x10                  1x10
+        d_error[r][c] = hidden_layer[r][c] * (1 - hidden_layer[r][c]) * (outputUnits[r][c]);
+    }
 
 }
