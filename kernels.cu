@@ -48,6 +48,31 @@ __global__ void activationFuncBackwardDevice(float *d_Z, float *d_dervA, float *
     }
 }
 
+__global__ void transposeDevice(float *d_M, float *d_N, int num_MRows, int num_MCols)
+{
+    int num_NRows = num_MCols;
+    int num_NCols = num_MRows;
+
+    // Row index of N
+    int rowN = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    // Col index of N
+    int colN = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Row index of M
+    int rowM = colN;
+    
+    // Col index of M
+    int colM = rowN;
+
+    if (rowN < num_NRows && colN < num_NCols) {
+        // Each thread computes one element of the block
+        int n_idx = colN + rowN * num_NCols;
+        int m_idx = colM + rowM * num_MCols;
+        d_N[n_idx] = d_M[m_idx];
+    }
+}
+
 // This is currently a non tiled version based on the text book implementation
 __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)
 {
@@ -202,6 +227,42 @@ void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols
     cudaFree(d_M);
     cudaFree(d_N);
     cudaFree(d_P);
+}
+
+// The transposed matrix h_N will have rows = num_MCols, cols = num_MRows
+void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols)
+{
+    float *d_M, *d_N;
+    cudaError_t cudaStatus;
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_M, num_MRows * num_MCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_N, num_MRows * num_MCols * sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_M, h_M, num_MRows * num_MCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_N, h_N, num_MRows * num_MCols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+    
+    // The rows and cols are interchanged here because of the transpose
+    dim3 gridDim((int)ceil((float)num_MRows / BLOCK_WIDTH), (int)ceil((float)num_MCols / BLOCK_WIDTH), 1);
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+
+    // Call the kernel
+    transposeDevice<<<gridDim, blockDim>>>(d_M, d_N, num_MRows, num_MCols);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(h_N, d_N, num_MRows * num_MCols * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_M);
+    cudaFree(d_N);
 }
 
 void elementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)

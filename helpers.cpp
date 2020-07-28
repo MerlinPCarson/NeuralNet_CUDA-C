@@ -1,6 +1,36 @@
 #include <stdio.h>
-#include "helpers.h"
 #include <math.h>
+#include "helpers.h"
+#include "data.h"
+
+
+// verify digits were correctly loaded into dataset
+void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData)
+{
+  printf("\nFirst digit in training set\n");
+  print_digit(trainSet[0].value, trainSet[0].label);
+  printf("\nLast digit in training set\n");
+  print_digit(trainSet[trainSet.size()-1].value, trainSet[trainSet.size()-1].label);
+  printf("\nFirst digit in validation set\n");
+  print_digit(valSet[0].value, valSet[0].label);
+  printf("\nLast digit in validation set\n");
+  print_digit(valSet[valSet.size()-1].value, valSet[valSet.size()-1].label);
+  printf("\nFirst digit in test set\n");
+  print_digit(testData[0].value, testData[0].label);
+  printf("\nLast digit in test set\n");
+  print_digit(testData[testData.size()-1].value, testData[testData.size()-1].label);
+}
+
+void printMatrix(float *X, int numRows, int numCols)
+{
+    for (int i = 0; i < numRows; i++) {
+        for (int j = 0; j < numCols; j++) {
+            int id = j + i * numCols;
+            printf("%f ", X[id]);
+        }
+        printf("\n");
+    }
+}
 
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols){
     
@@ -41,9 +71,21 @@ void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int 
     for (int i = 0; i < numRows; i++) {
         for (int j = 0; j < numCols; j++) {
             int idx = j + i * numCols;
-	        float s = hostSigmoid(h_Z[idx]);
-		
-			h_dervZ[idx] =  h_dervA[idx] * s * (1  - s) ;
+            float s = hostSigmoid(h_Z[idx]);
+        
+            h_dervZ[idx] =  h_dervA[idx] * s * (1  - s) ;
+        }
+    }
+}
+
+void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols)
+{
+    for (int i = 0; i < num_MRows; i++) {
+        for (int j = 0; j < num_MCols; j++) {
+            int m_idx = j + i * num_MCols;
+            int n_idx = i + j * num_MRows;
+            
+            h_N[n_idx] = h_M[m_idx] ;
         }
     }
 }

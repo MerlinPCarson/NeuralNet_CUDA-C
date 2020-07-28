@@ -8,16 +8,6 @@
 #include "kernels.h"
 #include "helpers.h"
 
-void printMatrix(float *X, int numRows, int numCols)
-{
-    for (int i = 0; i < numRows; i++) {
-        for (int j = 0; j < numCols; j++) {
-            int id = j + i * numCols;
-            printf("%f ", X[id]);
-        }
-        printf("\n");
-    }
-}
 
 int testDotProduct()
 {
@@ -316,6 +306,77 @@ int testElementMult()
 
 }
 
+int testTranspose()
+{
+    float *h_M, *h_N1, *h_N2;
+    bool bPass = true;
+    int MAX_NUM_ROWS = 10, MAX_NUM_COLS = 10;
+
+    for (int numRows = 1; numRows <= MAX_NUM_ROWS; numRows++) {
+        for (int numCols = 1; numCols <= MAX_NUM_COLS; numCols++) {
+                    
+            // Allocate memory for host variables
+            h_M = (float *)malloc(numRows * numCols * sizeof(float));
+            h_N1 = (float *)malloc(numRows * numCols * sizeof(float));
+            h_N2 = (float *)malloc(numRows * numCols * sizeof(float));
+            
+            if (h_M == NULL || h_N1 == NULL || h_N2 == NULL) {
+                printf("Host variable memory allocation failure\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // load arrays with some numbers
+            for (int i = 0; i < numRows; i++) {
+                for (int j = 0; j < numCols; j++) {
+                    int id = j + numCols * i;
+
+                    h_M[id] = i;
+                }
+            }
+
+            // Execute on CPU
+            hostTranspose(h_M, h_N1, numRows, numCols);
+
+            // Execute on GPU
+            transpose(h_M, h_N2, numRows, numCols);
+
+            int num_NRows = numCols;
+            int num_NCols = numRows;
+            // Compare the GPU results with the CPU results
+            for (int i = 0; bPass && i < num_NRows; i++) {
+                for (int j = 0; bPass && j < num_NCols; j++) {
+                    int id = j + i * num_NCols;
+                    
+                    if (h_N1[id] != h_N2[id]) {
+                        bPass = false;
+                    }
+                }
+            }
+
+            if (!bPass) {
+                printf("FAIL: transpose of (row/col): [%d / %d]\n", numRows, numCols);
+                printf("---transpose on CPU:---\n");
+                printMatrix(h_N1, num_NRows, num_NCols);
+                printf("------\n\n");
+                printf("---transpose on GPU:---\n");
+                printMatrix(h_N2, num_NRows, num_NCols);
+                printf("------\n\n");
+                return -1;
+            }
+
+            free(h_M);
+            free(h_N1);
+            free(h_N2);
+            
+            printf("PASS: transpose of (row/col): [%d / %d]\n", numRows, numCols);
+
+        }
+    }
+    
+    printf("*** All tests PASSED: transpose ***\n");
+    return 0;
+}
+
 int main(int argc, char * argv[])
 {
   // identify cuda devices
@@ -327,6 +388,7 @@ int main(int argc, char * argv[])
   testActivationFuncForward();
   testActivationFuncBackward();
   testElementMult();
+  testTranspose();
 
   return 0;
 }

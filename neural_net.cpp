@@ -2,7 +2,12 @@
 #include <math.h>
 #include <random>
 #include "neural_net.h"
+#include "kernels.h"
+#include "helpers.h"
 
+
+//#define DEBUG
+#define USE_GPU
 
 NeuralNet::NeuralNet(){
 
@@ -13,8 +18,10 @@ NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
   // initialize all layer weights
   init_weights();
 
+#ifdef DEBUG
   // display all layer weights
   show_weights();
+#endif // DEBUG
 
 }
 
@@ -33,9 +40,9 @@ void NeuralNet::init_weights(){
   }
 
   // init bias weight to 0 for each neuron in hidden layer
-  for(int i = 0; i < HIDDEN_SIZE; ++i){
-      hidden_weights[NUM_FEATURES][i] = 0;
-  }
+//  for(int i = 0; i < HIDDEN_SIZE; ++i){
+//      hidden_weights[NUM_FEATURES][i] = 0;
+//  }
 
   // init output layer weights
   limit = sqrt(6.0 / (HIDDEN_SIZE + NUM_LABELS));
@@ -48,9 +55,9 @@ void NeuralNet::init_weights(){
   }
   
   // init bias weight to 0 for each neuron in output layer
-  for(int i = 0; i < NUM_LABELS; ++i){
-      output_weights[HIDDEN_SIZE][i] = 0.0;
-  }
+//  for(int i = 0; i < NUM_LABELS; ++i){
+//      output_weights[HIDDEN_SIZE][i] = 0.0;
+//  }
 
 }
 
@@ -71,20 +78,18 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   int numTrainBatches = floor(trainSet.size()/BATCH_SIZE);
   int numValBatches = floor(valSet.size()/BATCH_SIZE);
 
-  // model batch outputs
-  float output[BATCH_SIZE][NUM_LABELS];
-
   // losses
   float loss = 0.0;
   float valLoss = 0.0;
 
   int i, j;
 
+  // data struct for model's losses during training
   History history;
 
   // main training loop
   for(i = 0; i < num_epochs; ++i){
-    std::cout << "\nEpoch: " << i << std::endl << std::endl;
+    std::cout << "\nEpoch: " << i + 1 << '/' << num_epochs << std::endl << std::endl;
 
     // train
     for(j = 0; j < numTrainBatches; ++j){
@@ -96,7 +101,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       make_batch(batch, target, trainSet, order, j);
  
       // forward pass
-      // forward(batch, output);
+      forward(batch);
       
       // calculated errors
       // loss += error(target, output)/BATCH_SIZE;
@@ -113,7 +118,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       make_batch(batch, target, valSet, valOrder, j);
 
       // forward pass
-      // forward(batch, output);
+      forward(batch);
 
       // calculated errors
       // valLoss += error(target, output)/BATCH_SIZE;
@@ -150,10 +155,33 @@ void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vec
 
   // copy random order of training elements to contiguous batch
   for(int i = startIdx; i < endIdx; ++i){
-    memcpy(batch[pos], &dataSet[order[i]].value[0], NUM_FEATURES * sizeof(dataSet[0].value[0]));
+    memcpy(batch[pos], &dataSet[order[i]].value[0], (NUM_FEATURES) * sizeof(dataSet[0].value[0]));
     target[pos] = dataSet[order[i]].label;
     ++pos;
   }
+
+}
+
+// forward propagation of a batch of examples
+void NeuralNet::forward(float batch[][NUM_FEATURES]){
+
+#ifdef USE_GPU
+    dotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
+    activationFuncForward((float*)hidden_signal, (float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
+    dotProduct((float*)hidden_activation, (float*)output_weights, (float*)output_signal, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
+    activationFuncForward((float*)output_signal, (float*)output_activation, BATCH_SIZE, NUM_LABELS);
+#else
+    hostDotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
+    hostActivationFuncForward((float*)hidden_signal, (float*)hidden_activation, BATCH_SIZE, HIDDEN_SIZE);
+    hostDotProduct((float*)hidden_activation, (float*)output_weights, (float*)output_signal, BATCH_SIZE, HIDDEN_SIZE, HIDDEN_SIZE, NUM_LABELS);
+    hostActivationFuncForward((float*)output_signal, (float*)output_activation, BATCH_SIZE, NUM_LABELS);
+#endif
+
+#ifdef DEBUG
+    printf("Printing output activations:\n");
+    printMatrix((float*)output_activation, BATCH_SIZE, NUM_LABELS);
+    printf("\n");
+#endif // DEBUG
 
 }
 
@@ -161,7 +189,7 @@ void NeuralNet::show_weights(){
 
   // display weights in hidden layer
   std::cout << "HIDDEN WEIGHTS:" << std::endl;
-  for(int i = 0; i < NUM_FEATURES+1; ++i){
+  for(int i = 0; i < NUM_FEATURES; ++i){
     for(int j = 0; j < HIDDEN_SIZE; ++j){
       std::cout << hidden_weights[i][j] << ' ';
     }
@@ -170,7 +198,7 @@ void NeuralNet::show_weights(){
 
   // display weights in output layer
   std::cout << "OUTPUT WEIGHTS:" << std::endl;
-  for(int i = 0; i < HIDDEN_SIZE+1; ++i){
+  for(int i = 0; i < HIDDEN_SIZE; ++i){
     for(int j = 0; j < NUM_LABELS; ++j){
       std::cout << output_weights[i][j] << ' ';
     }

@@ -24,7 +24,7 @@
 // data structure for MNIST digits
 struct Data{
 	int label;
-	float value[NUM_FEATURES+1];             // number of pixels +1 for bias term
+	float value[NUM_FEATURES];             // number of pixels +1 for bias term
 };
 
 void load_csv(std::vector<Data> &data, std::string data_file, int size);

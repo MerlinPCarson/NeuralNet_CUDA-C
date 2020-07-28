@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
+#include "data.h"
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
@@ -16,6 +17,10 @@ do {												\
   }												\
  } while(0)					
 
+
+void printMatrix(float *X, int numRows, int numCols);
+void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
+
 // display all cuda device
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 int cudaDeviceProperties();
@@ -23,5 +28,6 @@ void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, 
 void hostTranspose(float* A, int rows, int cols, float* &B);
 void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
 void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols);
+void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols);
 
 #endif // HELPERS_H
