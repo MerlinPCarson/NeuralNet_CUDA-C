@@ -99,12 +99,12 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   
       // load batch of data from training set using shuffled order
       make_batch(batch, target, trainSet, order, j);
- 
+
       // forward pass
       forward(batch);
       
-      // calculated errors
-      // loss += error(target, output)/BATCH_SIZE;
+      // add batch loss to epoch loss
+      loss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
       
       // backward pass
       // backward(batch, target, output);
@@ -120,8 +120,8 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       // forward pass
       forward(batch);
 
-      // calculated errors
-      // valLoss += error(target, output)/BATCH_SIZE;
+      // add batch loss to epoch validation loss
+      valLoss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
 
     }
 
@@ -140,7 +140,6 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
     valLoss = 0.0;
     
   }
-
 
   return history;
 }
