@@ -34,7 +34,7 @@ void printMatrix(float *X, int numRows, int numCols)
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
-void hostMSE(float *h_T, float *h_O, float *batchLoss, int batchSize, int numLabels)
+float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
 {
     // array that stores the number of labels in the batch
     int *labelCountArr;
@@ -47,9 +47,9 @@ void hostMSE(float *h_T, float *h_O, float *batchLoss, int batchSize, int numLab
 
     memset(labelSquareErr, 0, numLabels * sizeof(float));
     memset(labelCountArr, 0, numLabels * sizeof(int));
-    *batchLoss = 0;
+    float batchLoss = 0.0;
 
-    // Update the error matrix table
+    // Update the error table
     for (int i = 0; i < batchSize; i++) {
         int t_idx = h_T[i];
     
@@ -74,21 +74,12 @@ void hostMSE(float *h_T, float *h_O, float *batchLoss, int batchSize, int numLab
                 err += diff * diff;
             }
         }
-  
-        // MSE for this particular label (t)
-        labelSquareErr[t_idx] = err / (float)numLabels;
-        labelCountArr[t_idx]++;
+
+        err /= 2;
+        batchLoss += err;
     }
 
-    // Calculate the square error for each label
-    for (int i = 0; i < numLabels; i++) {
-        if (labelCountArr[i] == 0) continue;
-        labelSquareErr[i] /= (float)labelCountArr[i];
-        *batchLoss += labelSquareErr[i];
-    }
-  
-    // Calculate the square error for the batch
-    *batchLoss /= (float)batchSize;
+    return batchLoss / (float)batchSize;
 }
 
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols){
