@@ -32,6 +32,65 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
+// h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
+// numRows = batch size
+void hostMSE(float *h_T, float *h_O, float *batchLoss, int batchSize, int numLabels)
+{
+    // array that stores the number of labels in the batch
+    int *labelCountArr;
+  
+    // array to store the square error for each label
+    float *labelSquareErr;
+  
+    labelCountArr = (int *)malloc(numLabels * sizeof(int));
+    labelSquareErr = (float *)malloc(numLabels * sizeof(float));
+
+    memset(labelSquareErr, 0, numLabels * sizeof(float));
+    memset(labelCountArr, 0, numLabels * sizeof(int));
+    *batchLoss = 0;
+
+    // Update the error matrix table
+    for (int i = 0; i < batchSize; i++) {
+        int t_idx = h_T[i];
+    
+        // Sanity check
+        if (t_idx >= numLabels) {
+            printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
+            exit(-1);
+        }
+
+        // Now go through each of the output values and calculate the MSE
+        float err = 0;
+        for (int j = 0; j < numLabels; j++) {
+            int o_idx = j + i * numLabels;
+    
+            if (t_idx == j) {
+                // If this is the same as the expected output
+                float diff = 1 - h_O[o_idx];
+                err += diff * diff;
+            }
+            else {
+                float diff = h_O[o_idx];
+                err += diff * diff;
+            }
+        }
+  
+        // MSE for this particular label (t)
+        labelSquareErr[t_idx] = err / (float)numLabels;
+        labelCountArr[t_idx]++;
+    }
+
+    // Calculate the square error for each label
+    for (int i = 0; i < numLabels; i++) {
+        if (labelCountArr[i] == 0) continue;
+        labelSquareErr[i] /= (float)labelCountArr[i];
+        *batchLoss += labelSquareErr[i];
+    }
+  
+    // Calculate the square error for the batch
+    *batchLoss /= (float)batchSize;
+}
+
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols){
     
     int num_PRows = num_MRows;
