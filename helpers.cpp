@@ -2,6 +2,9 @@
 #include <math.h>
 #include "helpers.h"
 #include "data.h"
+#include <algorithm>
+#include <iterator>
+#include "neural_net.h"
 
 
 // verify digits were correctly loaded into dataset
@@ -32,8 +35,30 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
-void hostBatchPreds(float* output_activations, int * batch_pred){
+int hostArgMax(float * array, int size)
+{
+    return std::distance(array, std::max_element(array, array + size));
+}
 
+void hostBatchPreds(float* output_activations, int * batch_pred)
+{
+    // for(int i = 0; i < BATCH_SIZE; ++i)
+    // {
+    //     int counter = 0;
+    //     for(int j = 1; j < NUM_LABELS; ++j)
+    //     {
+    //         int idx = j + i*NUM_LABELS;
+    //         if(output_activations[idx] > output_activations[idx-1])
+    //         {
+    //             counter = j;
+    //         }
+    //     }
+    //     batch_pred[i] = counter;
+    // }
+    for(int i = 0; i < BATCH_SIZE; ++i)
+    {
+        batch_pred[i] = hostArgMax(&output_activations[i*NUM_LABELS], NUM_LABELS);
+    }
 }
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)

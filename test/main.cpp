@@ -7,6 +7,8 @@
 
 #include "kernels.h"
 #include "helpers.h"
+#include "neural_net.h"
+#include "data.h"
 
 int testDotProduct()
 {
@@ -484,6 +486,105 @@ int testMSE()
     return 0;
 }
 
+int testArgMax()
+{
+    int ARRAY_SIZE = 10;
+    float h_Array[ARRAY_SIZE];
+    
+    for(int i = 0; i < ARRAY_SIZE; ++i)
+    {
+        h_Array[i] = i;
+    }
+
+    int argMax = hostArgMax(h_Array, ARRAY_SIZE);
+
+    if(argMax == 9){
+        printf("*** PASS: Arg Max test\n");
+    }
+    else
+    {
+        printf("expected Arg Max: %d\n", 9);
+        printf("output Arg Max: %d\n", argMax);
+        printf("*** FAILED: Arg Max test\n");
+    }
+
+    for(int i = ARRAY_SIZE - 1; i >= 0; i--)
+    {
+        h_Array[i] = -i;
+    }
+
+    argMax = hostArgMax(h_Array, ARRAY_SIZE);
+
+
+    
+    if(argMax == 0){
+        printf("*** PASS: Arg Max test\n");
+    }
+    else
+    {
+        printf("expected Arg Max: %d\n", 0);
+        printf("output Arg Max: %d\n", argMax);
+        printf("*** FAILED: Arg Max test\n");
+    }
+
+    return 0;
+}
+
+void testBatchPreds()
+{
+    float h_Array[BATCH_SIZE][NUM_LABELS];
+    int preds_res[NUM_LABELS];
+    bool pass = true;
+
+    for(int i = 0; i < BATCH_SIZE; ++i)
+    {
+        for(int j = 0; j < NUM_LABELS; ++j)
+        {
+            // int idx = j + i*NUM_LABELS;
+            h_Array[i][j] = i+j;
+        }
+    }
+    
+    hostBatchPreds((float *)h_Array, preds_res);
+
+    for(int i = 0; i < BATCH_SIZE; ++i)
+    {
+        if(preds_res[i] != 9)
+        {
+            pass = false;
+        }
+    }
+
+    for(int i = 0; i < BATCH_SIZE; ++i)
+    {
+        for(int j = 0; j < NUM_LABELS; ++j)
+        {
+            // int idx = j + i*NUM_LABELS;
+            h_Array[i][j] = -(i+j);
+        }
+    }
+
+    for(int i = 0; i < BATCH_SIZE; ++i)
+    {
+        if(preds_res[i] != 9)
+        {
+            pass = false;
+        }
+    }
+    hostBatchPreds((float *)h_Array, preds_res);
+
+    if(pass)
+    {
+        printf("*** PASSED: Batch Predictions ***\n");
+    }
+    else
+    {
+        printf("*** FAILED: Batch Predicitions ***\n");
+    }
+    
+}
+
+
 int main(int argc, char * argv[])
 {
   // identify cuda devices
@@ -497,6 +598,8 @@ int main(int argc, char * argv[])
   testElementMult();
   testTranspose();
   testMSE();
+  testArgMax();
+  testBatchPreds();
 
   return 0;
 }
