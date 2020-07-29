@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <fstream>
 #include "helpers.h"
-#include "data.h"
 
 
 // verify digits were correctly loaded into dataset
@@ -30,6 +30,81 @@ void printMatrix(float *X, int numRows, int numCols)
         }
         printf("\n");
     }
+}
+
+void saveHistory(History history, const char* fileName){
+
+  // verify there is anything to write to file
+  if(history.loss.size() < 1 || history.valLoss.size() < 1){
+    printf("There is no history to write to file");
+    return;
+  }
+
+  // open file
+  std::ofstream file(fileName);
+
+  // write comma seprated training losses to file with newline at end
+  file << history.loss[0];
+  for(int i = 1; i < history.loss.size(); ++i){
+    file << ',';
+    file << history.loss[i];
+  }
+  file << std::endl;
+
+  // write comma seprated validation losses to file with newline at end
+  file << history.valLoss[0];
+  for(int i = 1; i < history.valLoss.size(); ++i){
+    file << ',';
+    file << history.valLoss[i];
+  }
+  file << std::endl;
+
+  // close file
+  file.close();
+
+}
+
+void hostBatchPreds(float* output_activations, int * batch_pred){
+
+}
+
+// h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
+// numRows = batch size
+float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
+{
+    float batchLoss = 0.0;
+
+    // Update the error table
+    for (int i = 0; i < batchSize; i++) {
+        int t_idx = h_T[i];
+    
+        // Sanity check
+        if (t_idx >= numLabels) {
+            printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
+            exit(-1);
+        }
+
+        // Now go through each of the output values and calculate the MSE
+        float err = 0;
+        for (int j = 0; j < numLabels; j++) {
+            int o_idx = j + i * numLabels;
+    
+            if (t_idx == j) {
+                // If this is the same as the expected output
+                float diff = 1 - h_O[o_idx];
+                err += diff * diff;
+            }
+            else {
+                float diff = h_O[o_idx];
+                err += diff * diff;
+            }
+        }
+
+        err /= 2;
+        batchLoss += err;
+    }
+
+    return batchLoss / (float)batchSize;
 }
 
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols){
