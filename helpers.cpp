@@ -32,21 +32,14 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
+void hostBatchPreds(float* output_activations, int * batch_pred){
+
+}
+
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
 float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
 {
-    // array that stores the number of labels in the batch
-    int *labelCountArr;
-  
-    // array to store the square error for each label
-    float *labelSquareErr;
-  
-    labelCountArr = (int *)malloc(numLabels * sizeof(int));
-    labelSquareErr = (float *)malloc(numLabels * sizeof(float));
-
-    memset(labelSquareErr, 0, numLabels * sizeof(float));
-    memset(labelCountArr, 0, numLabels * sizeof(int));
     float batchLoss = 0.0;
 
     // Update the error table

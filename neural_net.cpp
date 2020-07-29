@@ -82,29 +82,27 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   float loss = 0.0;
   float valLoss = 0.0;
 
-  int i, j;
-
   // data struct for model's losses during training
   History history;
 
   // main training loop
-  for(i = 0; i < num_epochs; ++i){
+  for(int i = 0; i < num_epochs; ++i){
     std::cout << "\nEpoch: " << i + 1 << '/' << num_epochs << std::endl << std::endl;
 
     // train
-    for(j = 0; j < numTrainBatches; ++j){
+    for(int j = 0; j < numTrainBatches; ++j){
   
       // shuffle order of data
       shuffle_idx(order, trainSet.size());
   
       // load batch of data from training set using shuffled order
       make_batch(batch, target, trainSet, order, j);
- 
+
       // forward pass
       forward(batch);
       
-      // calculated errors
-      // loss += error(target, output)/BATCH_SIZE;
+      // add batch loss to epoch loss
+      loss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
       
       // backward pass
       // backward(batch, target, output);
@@ -112,7 +110,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
     }
 
     // validate
-    for(j = 0; j < numValBatches; ++j){
+    for(int j = 0; j < numValBatches; ++j){
 
       // load batch of data from validation set 
       make_batch(batch, target, valSet, valOrder, j);
@@ -120,8 +118,8 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       // forward pass
       forward(batch);
 
-      // calculated errors
-      // valLoss += error(target, output)/BATCH_SIZE;
+      // add batch loss to epoch validation loss
+      valLoss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
 
     }
 
@@ -141,8 +139,53 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
     
   }
 
-
   return history;
+}
+
+void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, std::vector<int> &targets){
+
+  int * testOrder = new int[testData.size()];
+
+  // validation order is shuffled
+  for(int i = 0; i < testData.size(); ++i){
+    testOrder[i] = i;
+  }
+
+  float batch[BATCH_SIZE][NUM_FEATURES];
+  float target[BATCH_SIZE];
+  int batch_pred[BATCH_SIZE];
+
+  int numTestBatches = floor(testData.size()/BATCH_SIZE);
+
+  for(int i = 0; i < numTestBatches; ++i){
+    // load batch of data from validation set 
+    make_batch(batch, target, testData, testOrder, i);
+
+
+    // forward pass
+    forward(batch);
+
+    // get predictions (fills batch_pred with argmax of each row of output_activations)
+//#ifdef USE_GPU
+//    batchPreds((float*)output_activations, batch_pred);
+//#else // USE_GPU
+    hostBatchPreds((float*)output_activation, batch_pred);
+//#endif // USE_GPU
+
+    // add predictions and targets to output vectors
+      for(int j = 0; j < BATCH_SIZE; ++j){
+        preds.push_back(batch_pred[j]);
+        targets.push_back((int)target[j]);
+
+#ifdef DEBUG
+        print_digit(batch[j], target[j]);
+        printf("prediction: %d \n", batch_pred[j]);
+#endif // DEBUG
+
+      }
+
+  }
+
 }
 
 // load batch of data from a dataset from a shuffled dataset
