@@ -69,6 +69,12 @@ int testDotProduct()
                         printf("---dot product on GPU:---\n");
                         printMatrix(h_P2, num_MRows, num_NCols);
                         printf("------\n\n");
+                        
+                        free(h_M);
+                        free(h_N);
+                        free(h_P1);
+                        free(h_P2);
+                        
                         return -1;
                     }
 
@@ -142,6 +148,11 @@ int testActivationFuncForward()
                 printf("---forward activation func on GPU:---\n");
                 printMatrix(h_Y2, numRows, numCols);
                 printf("------\n\n");
+                
+                free(h_Z);
+                free(h_Y1);
+                free(h_Y2);
+            
                 return -1;
             }
 
@@ -214,6 +225,12 @@ int testActivationFuncBackward()
                 printf("---backward activation func on GPU:---\n");
                 printMatrix(h_dervZ2, numRows, numCols);
                 printf("------\n\n");
+            
+                free(h_Z);
+                free(h_dervA);
+                free(h_dervZ1);
+                free(h_dervZ2);
+                
                 return -1;
             }
 
@@ -287,6 +304,12 @@ int testElementMult()
                 printf("---element multiplication on GPU:---\n");
                 printMatrix(h_P2, numRows, numCols);
                 printf("------\n\n");
+
+                free(h_M);
+                free(h_N);
+                free(h_P1);
+                free(h_P2);
+                
                 return -1;
             }
 
@@ -360,6 +383,11 @@ int testTranspose()
                 printf("---transpose on GPU:---\n");
                 printMatrix(h_N2, num_NRows, num_NCols);
                 printf("------\n\n");
+                
+                free(h_M);
+                free(h_N1);
+                free(h_N2);
+            
                 return -1;
             }
 
@@ -379,7 +407,7 @@ int testTranspose()
 int testMSE()
 {
     float *h_T, *h_O;
-    float *h_batchLoss1, *h_batchLoss2;
+    float h_batchLoss1, h_batchLoss2;
     bool bPass = true;
     int MAX_NUM_ROWS = 20;
 
@@ -388,10 +416,8 @@ int testMSE()
         // Allocate memory for host variables
         h_T = (float *)malloc(numRows * sizeof(float));
         h_O = (float *)malloc(numRows * NUM_LABELS * sizeof(float));
-        h_batchLoss1 = (float *)malloc(sizeof(float));
-        h_batchLoss2 = (float *)malloc(sizeof(float));
         
-        if (h_T == NULL || h_O == NULL || h_batchLoss1 == NULL || h_batchLoss2 == NULL) {
+        if (h_T == NULL || h_O == NULL) {
             printf("Host variable memory allocation failure\n");
             exit(EXIT_FAILURE);
         }
@@ -404,51 +430,53 @@ int testMSE()
                 int t_idx = h_T[i];
                 int o_idx = j + i * NUM_LABELS;
 
-                if (j == t_idx) {
-                    h_O[o_idx] = 0.9;
-                }
-                else {
-                    h_O[o_idx] = 0;
-                }
-                //if (j % 2 == 0) {
-                //    h_O[o_idx] = 1; // For even i
-                //}
-                //else if (j % 3) {
-                //    h_O[o_idx] = 0;
+                //if (j == t_idx) {
+                //    h_O[o_idx] = 0.9;
                 //}
                 //else {
-                //    h_O[o_idx] = 0.5;
+                //    h_O[o_idx] = 0;
                 //}
+                if (j % 2 == 0) {
+                    h_O[o_idx] = 1; // For even i
+                }
+                else if (j % 3) {
+                    h_O[o_idx] = 0;
+                }
+                else {
+                    h_O[o_idx] = 0.5;
+                }
             }
         }
 
         // Execute on CPU
-        hostMSE(h_T, h_O, h_batchLoss1, numRows, NUM_LABELS);
+        h_batchLoss1 = hostMSE(h_T, h_O, numRows, NUM_LABELS);
 
         // Execute on GPU
-        //mse(h_T, h_O, h_labelSquareErr2, h_batchLoss2, numRows, NUM_LABELS);
+        h_batchLoss2 = MSE(h_T, h_O, numRows, NUM_LABELS);
 
         // Compare the GPU results with the CPU results
-        if (*h_batchLoss1 != *h_batchLoss2) {
+        if (h_batchLoss1 != h_batchLoss2) {
             bPass = false;
         }
 
         if (!bPass) {
             printf("FAIL: Loss for (numRows/batchSize): [%d]\n", numRows);
             printf("---Loss on CPU:---\n");
-            printf("Batch Loss = %f\n", *h_batchLoss1);
+            printf("Batch Loss = %f\n", h_batchLoss1);
             printf("------\n\n");
-            //printf("---Loss on GPU:---\n");
-            //printf("Batch Loss = %f\n", *h_batchLoss2);
-            //printf("------\n\n");
-            //return -1;
+            printf("---loss on gpu:---\n");
+            printf("batch loss = %f\n", h_batchLoss2);
+            printf("------\n\n");
+
+            free(h_T);
+            free(h_O);
+        
+            return -1;
         }
 
         free(h_T);
         free(h_O);
-        free(h_batchLoss1);
-        free(h_batchLoss2);
-        
+
         printf("PASS: Loss for (numRows/batchSize): [%d]\n", numRows);
     }
     
