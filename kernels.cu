@@ -100,11 +100,112 @@ __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRo
     }
 }
 
+// d_T is 1D (batchSize), d_O is 2D (batchSize, numLabels)
+// numRows = batch size
+// d_sampleSquareErr: array to store the square error for each sample
+__global__ void mseDevice(
+    float *d_T,
+    float *d_O,
+    float *d_sampleSquareErr,
+    float *batchLoss,
+    int batchSize,
+    int numLabels
+    )
+{
+    int batchId = blockIdx.x * blockDim.x + threadIdx.x;
+    int t_idx = d_T[batchId];
+
+    *batchLoss = 0;
+    
+    // Sanity check
+    if (t_idx >= numLabels) {
+        printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
+        return;
+    }
+
+    // Now go through each of the output values and calculate the MSE
+    float err = 0;
+    for (int j = 0; j < numLabels; j++) {
+        int o_idx = j + batchId * numLabels;
+
+        if (t_idx == j) {
+            // If this is the same as the expected output
+            float diff = 1 - d_O[o_idx];
+            err += diff * diff;
+        }
+        else {
+            float diff = d_O[o_idx];
+            err += diff * diff;
+        }
+    }
+    d_sampleSquareErr[batchId] = err;
+    
+    __syncthreads();
+
+    // Calculate the square error for the batch
+    
+    // Need only one thread to do this
+    if (batchId == 0) {
+        for (int i = 0; i < batchSize; i++) {
+            *batchLoss += d_sampleSquareErr[i];
+        }
+        *batchLoss /= (float)2;
+        *batchLoss /= (float)batchSize;
+    }
+}
+
 // 
 // Interface functions for the corresponding kernel functions.
 //
 
-// h_Y will ahve the output
+// h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
+// numRows = batch size
+float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
+{
+    float h_batchLoss = 0;
+    float *d_T, *d_O, *d_sampleSquareErr, *d_batchLoss;
+    cudaError_t cudaStatus;
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_T, batchSize * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_O, batchSize * numLabels * sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    cudaStatus = cudaMalloc((void**)&d_sampleSquareErr, batchSize * sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_batchLoss, sizeof(float));
+    cudaCheckError(cudaStatus);
+    
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_T, h_T, batchSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_O, h_O, batchSize * numLabels * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+    
+    dim3 gridDim((int)ceil((float)batchSize / BLOCK_WIDTH), 1, 1);
+    dim3 blockDim(BLOCK_WIDTH, 1, 1);
+
+    // Call the kernel
+    mseDevice<<<gridDim, blockDim>>>(d_T, d_O, d_sampleSquareErr, d_batchLoss, batchSize, numLabels);
+
+    // Copy back to host
+    cudaStatus = cudaMemcpy(&h_batchLoss, d_batchLoss, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    // Free device memory
+    cudaFree(d_T);
+    cudaFree(d_O);
+    cudaFree(d_sampleSquareErr);
+    cudaFree(d_batchLoss);
+    
+    return h_batchLoss;
+}
+
+// h_Y will have the output
 void activationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols)
 {
     float *d_Z, *d_Y;

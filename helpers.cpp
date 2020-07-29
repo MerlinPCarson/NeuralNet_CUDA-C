@@ -74,7 +74,7 @@ float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
 {
     float batchLoss = 0.0;
 
-    // Update the error matrix table
+    // Update the error table
     for (int i = 0; i < batchSize; i++) {
         int t_idx = h_T[i];
     
@@ -103,7 +103,7 @@ float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
         err /= 2;
         batchLoss += err;
     }
-    
+
     return batchLoss / (float)batchSize;
 }
 
