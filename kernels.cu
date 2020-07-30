@@ -22,6 +22,28 @@ __global__ void elementMultDevice(float *d_M, float *d_N, float *d_P, int num_MR
     }
 }
 
+__global__ void batchPredsDevice(float * out_activations, int * batch, int output_size, int batch_size)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(row < batch_size && col == 0)
+    {
+        int counter = 0;
+        float maxValue = out_activations[row * output_size];
+        for(int i = 1; i < output_size; ++i)
+        {
+            int idx = i + row*output_size;
+            if(out_activations[idx] > maxValue)
+            {
+                maxValue = out_activations[idx];
+                counter = i;
+            }
+        }
+        batch[row] = counter;
+    }
+}
+
 __global__ void activationFuncForwardDevice(float *d_Z, float *d_Y, int numRows, int numCols)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -364,6 +386,40 @@ void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols)
     // Free device memory
     cudaFree(d_M);
     cudaFree(d_N);
+}
+
+void batchPreds(float * h_activations, int * h_batchPreds, int activation_size, int b_size)
+{
+    float *d_activations;
+    int *d_batchPreds;
+    cudaError_t cudaStatus;
+
+    // Allocate memory for device variables
+    cudaStatus = cudaMalloc((void**)&d_activations, activation_size* b_size* sizeof(float));
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMalloc((void**)&d_batchPreds, activation_size * sizeof(int));
+    cudaCheckError(cudaStatus);
+
+    // Copy data to GPU
+    cudaStatus = cudaMemcpy(d_activations, h_activations, activation_size * b_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    cudaStatus = cudaMemcpy(d_batchPreds, h_batchPreds, activation_size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaCheckError(cudaStatus);
+
+    dim3 gridDim((int)ceil((float)activation_size / BLOCK_WIDTH), (int)ceil((float) b_size / BLOCK_WIDTH), 1);
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+
+    batchPredsDevice<<<gridDim, blockDim>>>(d_activations, d_batchPreds, activation_size, b_size);
+
+    //copy back to host
+    cudaStatus = cudaMemcpy(h_batchPreds, d_batchPreds, activation_size * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaCheckError(cudaStatus);
+
+    cudaFree(d_activations);
+    cudaFree(d_batchPreds);
+
 }
 
 void elementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols)

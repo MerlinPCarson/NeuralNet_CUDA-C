@@ -2,6 +2,7 @@
 #include <math.h>
 #include <fstream>
 #include "helpers.h"
+#include "data.h"
 
 
 // verify digits were correctly loaded into dataset
@@ -29,6 +30,25 @@ void printMatrix(float *X, int numRows, int numCols)
             printf("%f ", X[id]);
         }
         printf("\n");
+    }
+}
+
+void hostBatchPreds(float *output_activations, int *batch_pred, int output_size, int b_size)
+{
+    for(int i = 0; i < b_size; ++i)
+    {
+        int counter = 0;
+        float maxValue = output_activations[i*output_size];
+        for(int j = 1; j < output_size; ++j)
+        {
+            int idx = j + i*output_size;
+            if(output_activations[idx] > maxValue)
+            {
+                counter = j;
+                maxValue = output_activations[idx];
+            }
+        }
+        batch_pred[i] = counter;
     }
 }
 
@@ -61,10 +81,6 @@ void saveHistory(History history, const char* fileName){
 
   // close file
   file.close();
-
-}
-
-void hostBatchPreds(float* output_activations, int * batch_pred){
 
 }
 

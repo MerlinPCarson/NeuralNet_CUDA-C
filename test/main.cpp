@@ -4,6 +4,7 @@
 #include <random>
 #include <chrono>
 #include <vector>
+#include <time.h>
 
 #include "kernels.h"
 #include "helpers.h"
@@ -484,6 +485,52 @@ int testMSE()
     return 0;
 }
 
+void testBatchPreds()
+{
+    int batch_size = 10;
+    int num_labels = 10;
+    float h_Array[batch_size][num_labels];
+    int h_preds_res[num_labels];
+    int d_preds_res[num_labels];
+    bool pass = true;
+
+    std::srand(std::time(nullptr));
+
+    for(int i = 0; i < batch_size; ++i)
+    {
+        for(int j = 0; j < num_labels; ++j)
+        {
+            h_Array[i][j] = (float) std::rand()/RAND_MAX;
+        }
+    }
+    
+    hostBatchPreds((float *)h_Array, h_preds_res, num_labels, batch_size);
+    batchPreds((float *)h_Array, d_preds_res, num_labels, batch_size);
+
+    printMatrix((float*) h_Array, batch_size, num_labels);
+    for(int i = 0; i < batch_size; ++i)
+    {
+        printf("index: %d\n", i);
+        printf("host value: %d\n", h_preds_res[i]);
+        printf("device value: %d\n\n", d_preds_res[i]);
+        if(h_preds_res[i] != d_preds_res[i])
+        {
+            pass = false;
+        }
+    }
+
+    if(pass)
+    {
+        printf("*** PASSED: Batch Predictions ***\n");
+    }
+    else
+    {
+        printf("*** FAILED: Batch Predicitions ***\n");
+    }
+    
+}
+
+
 int main(int argc, char * argv[])
 {
   // identify cuda devices
@@ -497,6 +544,8 @@ int main(int argc, char * argv[])
   testElementMult();
   testTranspose();
   testMSE();
+//   testArgMax();
+  testBatchPreds();
 
   return 0;
 }

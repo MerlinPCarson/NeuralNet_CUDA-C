@@ -6,7 +6,7 @@
 #include "helpers.h"
 
 
-//#define DEBUG
+#define DEBUG
 #define USE_GPU
 
 NeuralNet::NeuralNet(){
@@ -29,6 +29,7 @@ NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
 void NeuralNet::init_weights(){
 
   std::default_random_engine generator;
+  generator.seed(time(NULL));
 
   // init hidden layer weights
   double limit = sqrt(6.0 / (NUM_FEATURES + HIDDEN_SIZE));
@@ -174,11 +175,11 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
     forward(batch);
 
     // get predictions (fills batch_pred with argmax of each row of output_activations)
-//#ifdef USE_GPU
-//    batchPreds((float*)output_activations, batch_pred);
-//#else // USE_GPU
-    hostBatchPreds((float*)output_activation, batch_pred);
-//#endif // USE_GPU
+#ifdef USE_GPU
+    batchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
+#else // USE_GPU
+    hostBatchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
+#endif // USE_GPU
 
     // add predictions and targets to output vectors
       for(int j = 0; j < BATCH_SIZE; ++j){
