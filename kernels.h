@@ -14,8 +14,8 @@ void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols);
 float MSE(float *h_T, float *h_O, int batchSize, int numLabels);
 
 // Backprop
-void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols);
-void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols);
-void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols);
+__global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols);
+__global__ void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols);
+__global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols);
 
 #endif // KERNELS_H

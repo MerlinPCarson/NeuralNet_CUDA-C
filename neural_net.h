@@ -2,7 +2,6 @@
 #define NEURAL_NET_H
 
 #include "data.h"
-#include "helpers.h"
 
 
 #define HIDDEN_SIZE (10)    // number of neurons in hidden layer
@@ -27,8 +26,8 @@ class NeuralNet{
 
         void init_weights();
         void show_weights();
-        void loss_function(int, float*, float*, float* &output_error, float* &hidden_error);
-        void update_weights();
+        void error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j);
+        void update_weights(float* error, float* layer, bool input);
 
         // need softmax function
 

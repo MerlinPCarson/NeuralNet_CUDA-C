@@ -424,7 +424,7 @@ __global__ void scalarMultiplication(double scalar, double* M, int Rows, int Col
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
 
     if(r < Rows && c < Cols)
-        M[r][c] *= scalar;
+        M[r*Cols + c] *= scalar;
 }
 
 
@@ -442,15 +442,15 @@ __global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha,
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        d_w[index] = eta * d_dotP + alpha * d_w[index];
+        d_w[index] = eta * d_dotP[index] + alpha * d_w[index];
     }
 
 }
 
-__global__ void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols){
+__global__ void outputError(float* d_error, float* targets, float* out_layer, int Rows, int Cols){
     /*
         d_error   -- delta_k
-        target    -- one hot encode 1D array containing 0.9 for target label
+        targets    -- one hot encode 1D array containing 0.9 for target label
         out_layer -- the squashed activations for the output layer
         Rows      -- should be 1 as they are all 1D arrays
         Cols      -- should be the number of ouput nodes 
@@ -461,7 +461,7 @@ __global__ void outputError(float* d_error, float* target, float* out_layer, int
     if(r < Rows && c < Cols){ 
         int index = r*Cols + c;
         // 1x10               1x10                    1x10               1x10              1x10
-        d_error[index] = out_layer[index] * (1 - out_layer[index]) * (target[index] - out_layer[index]);
+        d_error[index] = out_layer[index] * (1 - out_layer[index]) * (targets[index] - out_layer[index]);
     }
     
 }

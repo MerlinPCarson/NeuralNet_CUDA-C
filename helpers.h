@@ -6,7 +6,7 @@
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
 #include "data.h"
-#include "neural_net.h"
+// #include "neural_net.h"
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\
@@ -34,5 +34,6 @@ void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols)
 void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols);
 void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols);
 float hostMSE(float* h_T, float* h_O, int batchSize, int numLabels);
+
 
 #endif // HELPERS_H

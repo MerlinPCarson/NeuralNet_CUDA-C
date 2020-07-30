@@ -7,8 +7,7 @@
 
 #include "kernels.h"
 #include "neural_net.h"
-#include "data.h"
-#include "helpers.h"
+
 
 // If TESTING macro is uncommented, load a subset of dataset 
 #define TESTING
