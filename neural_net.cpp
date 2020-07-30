@@ -167,9 +167,9 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 
     // get predictions (fills batch_pred with argmax of each row of output_activations)
 //#ifdef USE_GPU
-//    batchPreds((float*)output_activations, batch_pred);
+    batchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
 //#else // USE_GPU
-    hostBatchPreds((float*)output_activation, batch_pred);
+    hostBatchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
 //#endif // USE_GPU
 
     // add predictions and targets to output vectors

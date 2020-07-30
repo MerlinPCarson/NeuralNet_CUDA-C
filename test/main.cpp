@@ -4,11 +4,10 @@
 #include <random>
 #include <chrono>
 #include <vector>
+#include <time.h>
 
 #include "kernels.h"
 #include "helpers.h"
-#include "neural_net.h"
-#include "data.h"
 
 int testDotProduct()
 {
@@ -486,92 +485,39 @@ int testMSE()
     return 0;
 }
 
-int testArgMax()
-{
-    int ARRAY_SIZE = 10;
-    float h_Array[ARRAY_SIZE];
-    
-    for(int i = 0; i < ARRAY_SIZE; ++i)
-    {
-        h_Array[i] = i;
-    }
-
-    int argMax = hostArgMax(h_Array, ARRAY_SIZE);
-
-    if(argMax == 9){
-        printf("*** PASS: Arg Max test\n");
-    }
-    else
-    {
-        printf("expected Arg Max: %d\n", 9);
-        printf("output Arg Max: %d\n", argMax);
-        printf("*** FAILED: Arg Max test\n");
-    }
-
-    for(int i = ARRAY_SIZE - 1; i >= 0; i--)
-    {
-        h_Array[i] = -i;
-    }
-
-    argMax = hostArgMax(h_Array, ARRAY_SIZE);
-
-
-    
-    if(argMax == 0){
-        printf("*** PASS: Arg Max test\n");
-    }
-    else
-    {
-        printf("expected Arg Max: %d\n", 0);
-        printf("output Arg Max: %d\n", argMax);
-        printf("*** FAILED: Arg Max test\n");
-    }
-
-    return 0;
-}
-
 void testBatchPreds()
 {
-    float h_Array[BATCH_SIZE][NUM_LABELS];
-    int preds_res[NUM_LABELS];
+    int batch_size = 10;
+    int num_labels = 10;
+    float h_Array[batch_size][num_labels];
+    int h_preds_res[num_labels];
+    int d_preds_res[num_labels];
     bool pass = true;
 
-    for(int i = 0; i < BATCH_SIZE; ++i)
+    std::srand(std::time(nullptr));
+
+    // for(int count = 0)
+    for(int i = 0; i < batch_size; ++i)
     {
-        for(int j = 0; j < NUM_LABELS; ++j)
+        for(int j = 0; j < num_labels; ++j)
         {
-            // int idx = j + i*NUM_LABELS;
-            h_Array[i][j] = i+j;
+            h_Array[i][j] = std::rand();
         }
     }
     
-    hostBatchPreds((float *)h_Array, preds_res);
+    hostBatchPreds((float *)h_Array, h_preds_res, num_labels, batch_size);
+    batchPreds((float *)h_Array, d_preds_res, num_labels, batch_size);
 
-    for(int i = 0; i < BATCH_SIZE; ++i)
+    for(int i = 0; i < batch_size; ++i)
     {
-        if(preds_res[i] != 9)
+        // printf("index: %d\n", i);
+        // printf("host value: %d\n", h_preds_res[i]);
+        // printf("device value: %d\n\n", d_preds_res[i]);
+        if(h_preds_res[i] != d_preds_res[i])
         {
             pass = false;
         }
     }
-
-    for(int i = 0; i < BATCH_SIZE; ++i)
-    {
-        for(int j = 0; j < NUM_LABELS; ++j)
-        {
-            // int idx = j + i*NUM_LABELS;
-            h_Array[i][j] = -(i+j);
-        }
-    }
-
-    for(int i = 0; i < BATCH_SIZE; ++i)
-    {
-        if(preds_res[i] != 9)
-        {
-            pass = false;
-        }
-    }
-    hostBatchPreds((float *)h_Array, preds_res);
 
     if(pass)
     {
@@ -598,7 +544,7 @@ int main(int argc, char * argv[])
   testElementMult();
   testTranspose();
   testMSE();
-  testArgMax();
+//   testArgMax();
   testBatchPreds();
 
   return 0;

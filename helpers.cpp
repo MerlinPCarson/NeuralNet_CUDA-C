@@ -35,29 +35,20 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
-int hostArgMax(float * array, int size)
+void hostBatchPreds(float* output_activations, int * batch_pred, int output_size, int b_size)
 {
-    return std::distance(array, std::max_element(array, array + size));
-}
-
-void hostBatchPreds(float* output_activations, int * batch_pred)
-{
-    // for(int i = 0; i < BATCH_SIZE; ++i)
-    // {
-    //     int counter = 0;
-    //     for(int j = 1; j < NUM_LABELS; ++j)
-    //     {
-    //         int idx = j + i*NUM_LABELS;
-    //         if(output_activations[idx] > output_activations[idx-1])
-    //         {
-    //             counter = j;
-    //         }
-    //     }
-    //     batch_pred[i] = counter;
-    // }
-    for(int i = 0; i < BATCH_SIZE; ++i)
+    for(int i = 0; i < b_size; ++i)
     {
-        batch_pred[i] = hostArgMax(&output_activations[i*NUM_LABELS], NUM_LABELS);
+        int counter = 0;
+        for(int j = 1; j < output_size; ++j)
+        {
+            int idx = j + i*output_size;
+            if(output_activations[idx] > output_activations[idx-1])
+            {
+                counter = j;
+            }
+        }
+        batch_pred[i] = counter;
     }
 }
 
