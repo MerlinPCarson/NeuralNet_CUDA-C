@@ -240,4 +240,3 @@ int cudaDeviceProperties(){
   return 1;
 }
 
-

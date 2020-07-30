@@ -19,9 +19,15 @@ Win/mnist/.vs/mnist/v16/.suo
 Win/mnist/x64/Debug/mnist.lib
 Win/mnist/x64/Debug/mnist.vcxproj.FileListAbsolute.txt
 Win/mnist/mnist.vcxproj.user
+
+# data files exceed file size without fls
+data/
 Win/mnist/x64/Debug/data/mnist_train.csv
 Win/mnist/x64/Debug/data/mnist_test.csv
 MNIST
 test/Win/mnist_test/mnist_test.vcxproj.user
 test/Win/mnist_test/x64/Debug/mnist_test.vcxproj.FileListAbsolute.txt
 Win/mnist/x64/Debug/mnist_test.lib
+
+# tests
+mnist_test

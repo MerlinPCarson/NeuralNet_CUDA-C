@@ -3,6 +3,7 @@
 
 #include "data.h"
 
+
 #define HIDDEN_SIZE (10)    // number of neurons in hidden layer
 #define BATCH_SIZE (2)     // number of examples between weight updates
 
@@ -25,12 +26,19 @@ class NeuralNet{
 
         void init_weights();
         void show_weights();
+        void error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j);
+        void update_weights(float* error, float* layer, bool input);
+
+        // need softmax function
 
         void make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum);
 
         void forward(float batch[][NUM_FEATURES]);
 
         float eta;            // learning rate
+        float alpha;          // momentum
+        float output_error[NUM_LABELS];   // output-to-hidden error 2 Layer NN
+        float hidden_error[HIDDEN_SIZE];   // hidden-to-input error  2 Layer NN
 
         float hidden_weights[NUM_FEATURES][HIDDEN_SIZE];    // hidden layer weights
         float output_weights[HIDDEN_SIZE][NUM_LABELS];      // output layer weights

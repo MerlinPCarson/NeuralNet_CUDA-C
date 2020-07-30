@@ -474,3 +474,70 @@ void elementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCol
     cudaFree(d_N);
     cudaFree(d_P);
 }
+
+__global__ void scalarMultiplication(double scalar, double* M, int Rows, int Cols){
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+
+    if(r < Rows && c < Cols)
+        M[r*Cols + c] *= scalar;
+}
+
+
+
+
+__global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols){
+    /*
+        w -- set of weights being updated
+        error -- the error by which the weights need to be updated
+        layer -- can be the output-to-hidden layer OR the hidden-to-input layer
+        alpha -- momentum
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < Cols){
+        int index = r*Cols + c;
+        d_w[index] = eta * d_dotP[index] + alpha * d_w[index];
+    }
+
+}
+
+__global__ void outputError(float* d_error, float* targets, float* out_layer, int Rows, int Cols){
+    /*
+        d_error   -- delta_k
+        targets    -- one hot encode 1D array containing 0.9 for target label
+        out_layer -- the squashed activations for the output layer
+        Rows      -- should be 1 as they are all 1D arrays
+        Cols      -- should be the number of ouput nodes 
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < Cols){ 
+        int index = r*Cols + c;
+        // 1x10               1x10                    1x10               1x10              1x10
+        d_error[index] = out_layer[index] * (1 - out_layer[index]) * (targets[index] - out_layer[index]);
+    }
+    
+}
+
+
+__global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols){
+    /*
+    d_error       -- delta_j    
+    outputUnits   -- the output error dot output weights
+    hidden_layer  -- the hidden activations
+    Rows          -- should be 1 as they are all 1D arrays
+    Cols          -- should be the number of ouput nodes 
+    */
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x; 
+    
+    if(r < Rows && c < Cols){
+        int index = r*Cols + c;
+        // 1x10               1x10                      1x10                     1x10
+        d_error[index] = hidden_layer[index] * (1 - hidden_layer[index]) * (outputUnits[index]);
+    }
+
+}
