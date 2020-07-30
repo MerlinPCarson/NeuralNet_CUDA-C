@@ -308,8 +308,8 @@ void dotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols
 {
     float *d_M, *d_N, *d_P;
     cudaError_t cudaStatus;
-    int num_PRows = num_MCols;
-    int num_PCols = num_NRows;
+    int num_PRows = num_MRows;
+    int num_PCols = num_NCols;
 
     if (num_MCols != num_NRows) {
         printf("(device) num_MCols != num_NRows\n");
