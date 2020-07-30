@@ -5,8 +5,7 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
-#include "data.h"
-// #include "neural_net.h"
+#include "neural_net.h"
 
 // Macro for checking for cuda errors
 #define cudaCheckError(status) 									\

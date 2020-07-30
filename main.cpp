@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "kernels.h"
-#include "neural_net.h"
+
 
 
 // If TESTING macro is uncommented, load a subset of dataset 
