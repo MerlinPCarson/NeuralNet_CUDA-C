@@ -1,4 +1,4 @@
-#ifndef NUERAL_NET_H
+#ifndef NEURAL_NET_H
 #define NEURAL_NET_H
 
 #include "data.h"

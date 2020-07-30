@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <math.h>
+#include <fstream>
 #include "helpers.h"
 #include "data.h"
-#include <algorithm>
-#include <iterator>
-#include "neural_net.h"
 
 
 // verify digits were correctly loaded into dataset
@@ -50,6 +48,38 @@ void hostBatchPreds(float* output_activations, int * batch_pred, int output_size
         }
         batch_pred[i] = counter;
     }
+}
+
+void saveHistory(History history, const char* fileName){
+
+  // verify there is anything to write to file
+  if(history.loss.size() < 1 || history.valLoss.size() < 1){
+    printf("There is no history to write to file");
+    return;
+  }
+
+  // open file
+  std::ofstream file(fileName);
+
+  // write comma seprated training losses to file with newline at end
+  file << history.loss[0];
+  for(int i = 1; i < history.loss.size(); ++i){
+    file << ',';
+    file << history.loss[i];
+  }
+  file << std::endl;
+
+  // write comma seprated validation losses to file with newline at end
+  file << history.valLoss[0];
+  for(int i = 1; i < history.valLoss.size(); ++i){
+    file << ',';
+    file << history.valLoss[i];
+  }
+  file << std::endl;
+
+  // close file
+  file.close();
+
 }
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)

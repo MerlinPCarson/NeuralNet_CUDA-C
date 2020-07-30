@@ -102,7 +102,11 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       forward(batch);
       
       // add batch loss to epoch loss
+#ifdef USE_GPU
+      loss += MSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
+#else // USE_GPU
       loss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
+#endif // USE_GPU
       
       // backward pass
       // backward(batch, target, output);
@@ -119,7 +123,11 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
       forward(batch);
 
       // add batch loss to epoch validation loss
+#ifdef USE_GPU
+      valLoss += MSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
+#else // USE_GPU
       valLoss += hostMSE(target, (float *)output_activation, BATCH_SIZE, NUM_LABELS);
+#endif // USE_GPU
 
     }
 
