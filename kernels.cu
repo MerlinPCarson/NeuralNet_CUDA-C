@@ -30,11 +30,13 @@ __global__ void batchPredsDevice(float * out_activations, int * batch, int outpu
     if(row < batch_size && col == 0)
     {
         int counter = 0;
+        float maxValue = out_activations[row * output_size];
         for(int i = 1; i < output_size; ++i)
         {
             int idx = i + row*output_size;
-            if(out_activations[idx] > out_activations[idx-1])
+            if(out_activations[idx] > maxValue)
             {
+                maxValue = out_activations[idx];
                 counter = i;
             }
         }

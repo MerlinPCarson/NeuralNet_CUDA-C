@@ -6,7 +6,7 @@
 #include "helpers.h"
 
 
-//#define DEBUG
+// #define DEBUG
 #define USE_GPU
 
 NeuralNet::NeuralNet(){
@@ -175,7 +175,7 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 
     // get predictions (fills batch_pred with argmax of each row of output_activations)
 //#ifdef USE_GPU
-    batchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
+    // batchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
 //#else // USE_GPU
     hostBatchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
 //#endif // USE_GPU

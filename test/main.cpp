@@ -496,23 +496,23 @@ void testBatchPreds()
 
     std::srand(std::time(nullptr));
 
-    // for(int count = 0)
     for(int i = 0; i < batch_size; ++i)
     {
         for(int j = 0; j < num_labels; ++j)
         {
-            h_Array[i][j] = std::rand();
+            h_Array[i][j] = (float) std::rand()/RAND_MAX;
         }
     }
     
     hostBatchPreds((float *)h_Array, h_preds_res, num_labels, batch_size);
     batchPreds((float *)h_Array, d_preds_res, num_labels, batch_size);
 
+    printMatrix((float*) h_Array, batch_size, num_labels);
     for(int i = 0; i < batch_size; ++i)
     {
-        // printf("index: %d\n", i);
-        // printf("host value: %d\n", h_preds_res[i]);
-        // printf("device value: %d\n\n", d_preds_res[i]);
+        printf("index: %d\n", i);
+        printf("host value: %d\n", h_preds_res[i]);
+        printf("device value: %d\n\n", d_preds_res[i]);
         if(h_preds_res[i] != d_preds_res[i])
         {
             pass = false;

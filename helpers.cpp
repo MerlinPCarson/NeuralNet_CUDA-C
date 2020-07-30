@@ -33,17 +33,19 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
-void hostBatchPreds(float* output_activations, int * batch_pred, int output_size, int b_size)
+void hostBatchPreds(float *output_activations, int *batch_pred, int output_size, int b_size)
 {
     for(int i = 0; i < b_size; ++i)
     {
         int counter = 0;
+        float maxValue = output_activations[i*output_size];
         for(int j = 1; j < output_size; ++j)
         {
             int idx = j + i*output_size;
-            if(output_activations[idx] > output_activations[idx-1])
+            if(output_activations[idx] > maxValue)
             {
                 counter = j;
+                maxValue = output_activations[idx];
             }
         }
         batch_pred[i] = counter;
