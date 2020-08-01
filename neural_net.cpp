@@ -1,6 +1,9 @@
 #include <iostream>
 #include <math.h>
 #include <random>
+#include <time.h>
+#include <cuda_runtime_api.h>
+#include <driver_types.h>
 #include "neural_net.h"
 #include "kernels.h"
 #include "helpers.h"
@@ -319,7 +322,7 @@ void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float
   //--------------  END: DEEIVCE Prep ----------------------
 
   
-  outputError <<< dimGrid, dimBlock >>>(delta_k, targets, z, outRows, outCols ); 
+  outputError<<<dimGrid, dimBlock>>>(delta_k, targets, z, outRows, outCols); 
   int dleta_kRows = outRows;
   int dleta_kCols = outCols;
   
@@ -379,7 +382,7 @@ void NeuralNet::update_weights(float* error, float* layer, bool input){
     layerCols = NUM_FEATURES;     // TODO double check layer dimensions
   }
 
-  float errorTransposed[error_size];
+  float errorTransposed[HIDDEN_SIZE];
   hostTranspose(curr_error, errorTransposed, 1, error_size);
 
 

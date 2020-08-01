@@ -5,6 +5,8 @@
 #include <chrono>
 #include <vector>
 #include <time.h>
+#include <cuda_runtime_api.h>
+#include <driver_types.h>
 
 #include "kernels.h"
 #include "helpers.h"
@@ -489,12 +491,12 @@ void testBatchPreds()
 {
     int batch_size = 10;
     int num_labels = 10;
-    float h_Array[batch_size][num_labels];
-    int h_preds_res[num_labels];
-    int d_preds_res[num_labels];
+    float h_Array[10][10];
+    int h_preds_res[10];
+    int d_preds_res[10];
     bool pass = true;
 
-    std::srand(std::time(nullptr));
+    std::srand(time(nullptr));
 
     for(int i = 0; i < batch_size; ++i)
     {
