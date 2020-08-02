@@ -201,16 +201,16 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 }
 
 // Calculates accuracy of the passed in set.
-float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &target)
+float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
 {
     float acc = 0;
     
-    if (pred.size() != target.size()) {
+    if (pred.size() != targets.size()) {
         std::cout << "Vector sizes do not match (accuracy)" << std::endl;
         exit(-1);
     }
-    
-    for (auto it1 = pred.begin(), it2 = target.begin(); it1 != it2; it1++, it2++) {
+
+    for (auto it1 = pred.begin(), it2 = targets.begin(); it1 != pred.end() && it2 != targets.end(); it1++, it2++) {
         if (*it1 == *it2) acc++;
     }
     
