@@ -73,6 +73,8 @@ int main(int argc, char * argv[])
   std::vector<int> targets;
   model.predict(testData, preds, targets);
 
+  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
+
   // total time to run program 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
   std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";

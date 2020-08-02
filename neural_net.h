@@ -21,6 +21,7 @@ class NeuralNet{
 
         History fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs);
         void predict(std::vector<Data> &testData, std::vector<int> &pred, std::vector<int> &target);
+        float accuracy(std::vector<int> &pred, std::vector<int> &target);
 
     private:
 

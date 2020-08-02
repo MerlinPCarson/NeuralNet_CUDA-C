@@ -200,6 +200,23 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 
 }
 
+// Calculates accuracy of the passed in set.
+float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &target)
+{
+    float acc = 0;
+    
+    if (pred.size() != target.size()) {
+        std::cout << "Vector sizes do not match (accuracy)" << std::endl;
+        exit(-1);
+    }
+    
+    for (auto it1 = pred.begin(), it2 = target.begin(); it1 != it2; it1++, it2++) {
+        if (*it1 == *it2) acc++;
+    }
+    
+    return acc / pred.size();
+}
+
 // load batch of data from a dataset from a shuffled dataset
 void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum){
 
