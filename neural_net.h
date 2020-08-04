@@ -26,15 +26,16 @@ class NeuralNet{
 
         void init_weights();
         void show_weights();
-        void error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j);
-        void update_weights(float* error, float* layer, bool input);
+        void error(float t);
+        void update_hidden_weights();
+        void update_input_weights(float* batch);
 
         // need softmax function
 
         void make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum);
 
         void forward(float batch[][NUM_FEATURES]);
-        void backwards(const float** &batch, float t);
+        void backward(float batch[][NUM_FEATURES], float* t);
 
         float eta;            // learning rate
         float alpha;          // momentum
