@@ -259,12 +259,6 @@ void NeuralNet::show_weights(){
 }
 
 void NeuralNet::backward(float train_batch[][NUM_FEATURES],  float* target){
-// output activations
-// hidden activations are part of the class.
-
-  //TODO need to process all the batches
-  // need to think about input layer vs. hidden layer
-
   for(int i = 0; i<BATCH_SIZE; ++i){
     error(target[i]);
     update_hidden_weights(); 
@@ -281,7 +275,16 @@ void NeuralNet::error(float t){
       delta_k -- output error 
       delta_j -- hidden error
   */
-  error_function(t, (float*)output_activation, (float*)hidden_activation, (float*)output_weights, output_error, hidden_error);
+  error_function(t, (float*)output_activation, (float*)hidden_activation, (float*)output_weights, (float*)output_error, (float*)hidden_error);
+// #ifdef DEBUG
+//   printf("IN ERROR \nPrinting OUT ERROR:\n");
+//   printMatrix((float*)output_error, 1, NUM_LABELS);
+//   printf("\n");
+
+//   printf("IN ERROR \nPrinting HIDDEN ERROR:\n");
+//   printMatrix((float*)hidden_error, 1, HIDDEN_SIZE);
+//   printf("\n");
+// #endif
 }
 
 
@@ -297,7 +300,7 @@ void NeuralNet::update_hidden_weights(){
   int weightRows, weightCols, layerRows, layerCols, error_size;
 
   w = (float*)output_weights;   // 10x10
-  curr_error = output_error;    // 1x10  (OUTPUT LABELS)
+  curr_error = (float*)output_error;    // 1x10  (OUTPUT LABELS)
   error_size = NUM_LABELS;      // 10
 
   weightRows = HIDDEN_SIZE;     // 10
@@ -315,10 +318,9 @@ void NeuralNet::update_hidden_weights(){
   float* dotP;
   dotP = (float*)malloc(layerCols*error_size*sizeof(float));
   // d_dotP's dimeninsions will be     layerCols x error_size
-  dotProduct((float*)hidden_activation, errorTransposed, dotP, layerRows, layerCols, 1, error_size);
+  dotProduct((float*)hidden_activation, errorTransposed, dotP, layerRows, layerCols, error_size, 1);
 
   update_weights(eta, alpha, w, weightRows, weightCols, dotP, layerCols, error_size);
-
 }
 
 
@@ -332,8 +334,8 @@ void NeuralNet::update_input_weights(float* batch){
   
   float *curr_error, *w;
   int weightRows, weightCols, layerRows, layerCols, error_size;
-  w = (float*)hidden_weights;      // 784x10
-  curr_error = this->hidden_error;    // 1x10 (HIDDEN SIZE)
+  w = (float*)hidden_weights;        // 784x10
+  curr_error = (float*)hidden_error; // 2x10 (HIDDEN SIZE)
   error_size = HIDDEN_SIZE;
 
   weightRows = NUM_FEATURES;    // 784
@@ -346,14 +348,12 @@ void NeuralNet::update_input_weights(float* batch){
   hostTranspose(curr_error, errorTransposed, 1, error_size);
 
 
-
   float* dotP;
   dotP = (float*)malloc(layerCols*error_size*sizeof(float));
   // d_dotP's dimeninsions will be     layerCols x error_size
-  dotProduct(batch, errorTransposed, dotP, layerRows, layerCols, 1, error_size);
-
+  dotProduct(batch, errorTransposed, dotP, layerRows, layerCols, error_size, 1);
+  
   update_weights(eta, alpha, w, weightRows, weightCols, dotP, layerCols, error_size );
-
 }
 
 

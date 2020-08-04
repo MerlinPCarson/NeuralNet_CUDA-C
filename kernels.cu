@@ -1,6 +1,8 @@
 #include "kernels.h"
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
+#define DEBUG
 
 __device__ float sigmoid(float z)
 {
@@ -518,7 +520,7 @@ __global__ void outputError(float* d_error, float t, float* out_layer, int Rows,
     if(r < Rows && c < Cols){ 
         int index = r*Cols + c;
         if(t == index)
-            // 1x10               1x10                    1x10            1          1x10
+            // 2x10               2x10                    2x10            1          2x10
             d_error[index] = out_layer[index] * (1 - out_layer[index]) * (1 - out_layer[index]);
         else 
             d_error[index] = out_layer[index] * (1 - out_layer[index]) * (0 - out_layer[index]);
@@ -540,7 +542,7 @@ __global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_la
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        // 1x10               1x10                      1x10                     1x10
+        // 2x10               2x10                      2x10                     1x10
         d_error[index] = hidden_layer[index] * (1 - hidden_layer[index]) * (outputUnits[index]);
     }
 
@@ -550,18 +552,14 @@ __global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_la
 
 
 void error_function(int t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
- 
-  //--------------  DEEIVCE Prep ----------------------
+    
+    //--------------  DEEIVCE Prep ----------------------
   float *d_z, *d_h, *d_k, *d_j;
-  float *outputUnits; 
-  int outRows    = 1,  outCols    = NUM_LABELS;
-  int hiddenRows = 1,  hiddenCols = HIDDEN_SIZE;
+  float *outputUnits, *d_outputUnits; 
+  int outRows    = BATCH_SIZE,  outCols    = NUM_LABELS;
+  int hiddenRows = BATCH_SIZE,  hiddenCols = HIDDEN_SIZE;
+  int pRows      = BATCH_SIZE,  pCols = NUM_LABELS;
 
-
-//   // one hot matrix
-//   float targets[NUM_LABELS];
-//   for(int i = 0; i < NUM_LABELS; ++i)
-//     targets[i] = (t==i) ? 1 : 0;
   
   cudaError_t cudaStatus;
   cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
@@ -573,24 +571,24 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   cudaCheckError(cudaStatus);
   cudaStatus = cudaMemcpy(d_h, h, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
-
-
+  
+  
   cudaStatus = cudaMalloc((void**)&d_k, outRows * outCols * sizeof(float));
   cudaCheckError(cudaStatus);
   cudaStatus = cudaMemcpy(d_k, delta_k, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
-
+  
   cudaStatus = cudaMalloc((void**)&d_j, hiddenRows * hiddenCols * sizeof(float));
   cudaCheckError(cudaStatus);
   cudaStatus = cudaMemcpy(d_j, delta_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
-
-
-    // used for the dot product of output error and output weights
-  cudaStatus = cudaMalloc((void**)&outputUnits, outRows * hiddenCols * sizeof(float));
+  
+  // used for the dot product of output error and output weights
+  cudaStatus = cudaMalloc((void**)&d_outputUnits, pRows * pCols * sizeof(float));
   cudaCheckError(cudaStatus);
-
-
+  
+  
+  
   // call kernel for weight update for each thread to update a weight
   int blockX = ceil(outRows/BLOCK_WIDTH);
   int blockY = ceil(outCols/BLOCK_WIDTH);
@@ -599,12 +597,29 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   dim3 dimGrid(blockX,   blockY,  1);
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep  ----------------------
+  
+  
+  outputError<<<dimGrid, dimBlock>>>(d_k, t, z, outRows, outCols ); 
+  // copy back to the host because we need delta K for the dotP
+  cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * outCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+  int delta_kRows = outRows;
+  int delta_kCols = outCols;
 
+#ifdef DEBUG   
+  printf("IN ERROR \nPrinting OUTPUT Weights:\n");
+  printMatrix((float*)output_weights, hiddenCols, outCols);
+  printf("\n");
   
-  outputError<<<dimGrid, dimBlock>>>(delta_k, t, z, outRows, outCols ); 
-  int dleta_kRows = outRows;
-  int dleta_kCols = outCols;
+  printf("IN ERROR \nPrinting DELTA K:\n");
+  printMatrix((float*)delta_k, delta_kRows, delta_kRows);
+  printf("\n");
+#endif
   
+  outputUnits = (float*)malloc(pRows*pCols*sizeof(float));
+  // output error dot output weights = outputUnits
+  //    2x10 @ 10x10  = 2x10
+  dotProduct(delta_k, (float*)output_weights, outputUnits, delta_kRows, delta_kCols, HIDDEN_SIZE, NUM_LABELS);
   
   // Prep for hidden error
   blockX = ceil(hiddenCols/2);
@@ -614,17 +629,16 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   dim3 dimGrid2(blockX,   blockY,  1);
   dim3 dimBlock2(threadX, threadY, 1);
   
-  // output error dot output weights = outputUnits
-  //    1x10 @ 10x10  = 1x10
-  dotProduct(delta_k, (float*)output_weights, outputUnits, dleta_kRows, dleta_kCols, HIDDEN_SIZE, NUM_LABELS);
-  hiddenError<<<dimGrid2, dimBlock2>>>(delta_j, outputUnits, h, hiddenRows, hiddenCols );
 
+  cudaStatus = cudaMemcpy(d_outputUnits, outputUnits, pRows * pCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
+  hiddenError<<<dimGrid2, dimBlock2>>>(d_j, d_outputUnits, d_h, hiddenRows, hiddenCols );
+  
   // copy back to the host variables
-  cudaStatus = cudaMemcpy(delta_j, d_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaStatus = cudaMemcpy(delta_j, d_j, sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(delta_k, d_k, outRows * outCols * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaCheckError(cudaStatus);
-
+  
   // deallocate device memory
   cudaFree(d_z);
   cudaFree(d_h);
@@ -663,8 +677,8 @@ void update_weights(float eta, float alpha, float* hidden_weights, int wRows, in
   //--------------  END: DEEIVCE Prep ----------------------
 
                           
-                          // output-hidden    (1x10) hidden activations  DOT  error(1x10)
-                          // hidden-input     (1x785) inputs  DOT  error(1x10) 
+  // output-hidden    (1x10) hidden activations  DOT  error(1x10)
+  // hidden-input     (1x785) inputs  DOT  error(1x10) 
   updateWeights<<<dimGrid, dimBlock>>>(eta, alpha, d_dotP, wRows, wCols, d_w);
 
   
