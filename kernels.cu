@@ -600,6 +600,7 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   
   
   outputError<<<dimGrid, dimBlock>>>(d_k, t, z, outRows, outCols ); 
+  
   // copy back to the host because we need delta K for the dotP
   cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * outCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
@@ -612,7 +613,7 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   printf("\n");
   
   printf("IN ERROR \nPrinting DELTA K:\n");
-  printMatrix((float*)delta_k, delta_kRows, delta_kRows);
+  printMatrix((float*)delta_k, delta_kRows, delta_kCols);
   printf("\n");
 #endif
   
