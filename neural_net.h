@@ -34,6 +34,7 @@ class NeuralNet{
         void make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum);
 
         void forward(float batch[][NUM_FEATURES]);
+        void backwards(const float** &batch, float t);
 
         float eta;            // learning rate
         float alpha;          // momentum

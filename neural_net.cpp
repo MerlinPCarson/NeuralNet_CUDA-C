@@ -110,7 +110,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
 #endif // USE_GPU
       
       // backward pass
-      // backward(batch, target, output);
+      backward(batch, target); // target just has 2 labels
       
     }
 
@@ -258,8 +258,22 @@ void NeuralNet::show_weights(){
   }
 }
 
+void NeuralNet::backwards(float* train_Batch,  int* target){
+// output activations
+// hidden activations are part of the class.
+
+  //TODO need to process all the batches
+  // need to think about input layer vs. hidden layer
+
+  for(int i = 0; i<BATCH_SIZE; ++i)){
+    error_function(target[i]);
+    update_weights(delta_k, output_activation, false); 
+  }
+}
+
+
 void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j){
-  /* t       -- target label 
+  /*  t       -- target label 
       z       -- output activations
       h       -- hidden actications
       delta_k -- output error 
@@ -273,10 +287,10 @@ void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float
   int hiddenRows = 1,  hiddenCols = HIDDEN_SIZE;
 
 
-  // one hot probabilistic  matrix
+  // one hot matrix
   float targets[NUM_LABELS];
   for(int i = 0; i < NUM_LABELS; ++i)
-    targets[i] = (t==i) ? 0.9 : 0.1;
+    targets[i] = (t==i) ? 1 : 0;
   
   cudaError_t cudaStatus;
   cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
@@ -310,8 +324,8 @@ void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float
 
 
   // call kernel for weight update for each thread to update a weight
-  int blockX = ceil(outRows/2);
-  int blockY = ceil(outCols/2);
+  int blockX = ceil(outRows/BLOCK_WIDTH);
+  int blockY = ceil(outCols/BLOCK_WIDTH);
   int threadX = BLOCK_WIDTH;
   int threadY = BLOCK_WIDTH;
   dim3 dimGrid(blockX,   blockY,  1);
@@ -352,6 +366,8 @@ void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float
   cudaFree(outputUnits);
 }
 
+
+
 void NeuralNet::update_weights(float* error, float* layer, bool input){
   /*
   * error -- the error to update the weights
@@ -383,6 +399,10 @@ void NeuralNet::update_weights(float* error, float* layer, bool input){
   hostTranspose(curr_error, errorTransposed, 1, error_size);
 
 
+  float* dotP;
+  // d_dotP's dimeninsions will be     layerCols x error_size
+  dotProduct(layer, errorTransposed, dotP, layerRows, layerCols, 1, error_size);
+
   //--------------  DEEIVCE Prep ----------------------
   float *d_w, *d_error, *d_layer, *d_dotP;
 
@@ -392,18 +412,9 @@ void NeuralNet::update_weights(float* error, float* layer, bool input){
   cudaStatus = cudaMemcpy(d_w, w, weightRows * weightCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
 
-  cudaStatus = cudaMalloc((void**)&d_layer, layerRows * layerCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_layer, layer, layerRows * layerCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-
-  cudaStatus = cudaMalloc((void**)&d_error, error_size * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_error, errorTransposed, error_size * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
   cudaStatus = cudaMalloc((void**)&d_dotP, error_size * layerCols * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_dotP, dotP, weightRows * weightCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
 
 
@@ -416,9 +427,6 @@ void NeuralNet::update_weights(float* error, float* layer, bool input){
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep ----------------------
 
-  
-  // d_dotP's dimeninsions will be     layerCols x error_size
-  dotProduct(d_layer, d_error, d_dotP, layerRows, layerCols, 1, error_size);
                           
                           // output-hidden    (1x10) hidden activations  DOT  error(1x10)
                           // hidden-input     (1x785) inputs  DOT  error(1x10) 
@@ -429,12 +437,9 @@ void NeuralNet::update_weights(float* error, float* layer, bool input){
   cudaStatus = cudaMemcpy(w, d_w,  weightRows * weightCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
   
-  
     
     // deallocate device memory
   cudaFree(d_w);
-  cudaFree(d_error);
-  cudaFree(d_layer);
   cudaFree(d_dotP);
 
 }
