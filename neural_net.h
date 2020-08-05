@@ -4,8 +4,8 @@
 #include "data.h"
 
 
-#define HIDDEN_SIZE (10)    // number of neurons in hidden layer
-#define BATCH_SIZE (2)     // number of examples between weight updates
+#define HIDDEN_SIZE (2)    // number of neurons in hidden layer
+#define BATCH_SIZE (1)     // number of examples between weight updates
 
 struct History{
   std::vector<float> loss;
@@ -28,7 +28,7 @@ class NeuralNet{
         void show_weights();
         void error(float t);
         void update_hidden_weights();
-        void update_input_weights(float* batch);
+        void update_input_weights(float batch[][NUM_FEATURES]);
 
         // need softmax function
 
