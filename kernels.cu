@@ -643,8 +643,13 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   cudaFree(d_k);
   cudaFree(d_j);
   cudaFree(d_dotP);
+
   
+  free(errorTransposed);
+  free(dotP);
 }
+
+
 void update_weights(float eta, float alpha, float* weights, int wRows, int wCols, float* dotP, int pRows, int pCols){
 /*
     dotP -- error Transposed @ current layer activations

@@ -317,6 +317,9 @@ void NeuralNet::update_hidden_weights(){
   dotProduct(errorTransposed, (float*)hidden_activation,  dotP, errorCols, errorRows, layerRows, layerCols);
 
   update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols);
+  
+  free(errorTransposed);
+  free(dotP);
 }
 
 
@@ -354,6 +357,9 @@ void NeuralNet::update_input_weights(float batch[BATCH_SIZE][NUM_FEATURES]){
   dotProduct(errorTransposed, (float*)batch, dotP, errorCols, errorRows, layerRows, layerCols);
   
   update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols );
+
+  free(errorTransposed);
+  free(dotP);
 }
 
 
