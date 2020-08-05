@@ -506,11 +506,11 @@ __global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, i
 
 }
 
-__global__ void outputError(float* d_error, float t, float* out_layer, int Rows, int Cols){
+__global__ void outputError(float* d_error, float t, float* d_out_layer, int Rows, int Cols){
     /*
         d_error   -- delta_k
         targets    -- one hot encode 1D array containing 0.9 for target label
-        out_layer -- the squashed activations for the output layer
+        d_out_layer -- the squashed activations for the output layer
         Rows      -- should be 1 as they are all 1D arrays
         Cols      -- should be the number of ouput nodes 
     */
@@ -521,9 +521,9 @@ __global__ void outputError(float* d_error, float t, float* out_layer, int Rows,
         int index = r*Cols + c;
         if(t == index)
             // 2x10               2x10                    2x10            1          2x10
-            d_error[index] = out_layer[index] * (1 - out_layer[index]) * (1 - out_layer[index]);
+            d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (1 - d_out_layer[index]);
         else 
-            d_error[index] = out_layer[index] * (1 - out_layer[index]) * (0 - out_layer[index]);
+            d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (0 - d_out_layer[index]);
     }
     
 }
@@ -598,8 +598,13 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep  ----------------------
   
+  #ifdef DEBUG   
+    printf("IN ERROR \nPrinting OUTPUT Activations:\n");
+    printMatrix((float*)z, outRows, outCols);
+    printf("\n");
+  #endif
   
-  outputError<<<dimGrid, dimBlock>>>(d_k, t, z, outRows, outCols ); 
+  outputError<<<dimGrid, dimBlock>>>(d_k, t, d_z, outRows, outCols ); 
   
   // copy back to the host because we need delta K for the dotP
   cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * outCols * sizeof(float), cudaMemcpyDeviceToHost);
