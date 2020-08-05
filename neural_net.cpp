@@ -1,6 +1,9 @@
 #include <iostream>
 #include <math.h>
 #include <random>
+#include <time.h>
+#include <cuda_runtime_api.h>
+#include <driver_types.h>
 #include "neural_net.h"
 #include "kernels.h"
 #include "helpers.h"
@@ -197,6 +200,23 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 
 }
 
+// Calculates accuracy of the passed in set.
+float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
+{
+    float acc = 0;
+    
+    if (pred.size() != targets.size()) {
+        std::cout << "Vector sizes do not match (accuracy)" << std::endl;
+        exit(-1);
+    }
+
+    for (auto it1 = pred.begin(), it2 = targets.begin(); it1 != pred.end() && it2 != targets.end(); it1++, it2++) {
+        if (*it1 == *it2) acc++;
+    }
+    
+    return acc / pred.size();
+}
+
 // load batch of data from a dataset from a shuffled dataset
 void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum){
 
@@ -268,6 +288,7 @@ void NeuralNet::backward(float train_batch[][NUM_FEATURES],  float* target){
 
 
 
+
 void NeuralNet::error(float t){
   // t       -- target label
 
@@ -291,10 +312,12 @@ void NeuralNet::update_hidden_weights(){
   float *curr_error, *w;
   int weightRows, weightCols, layerRows, layerCols, errorRows, errorCols;
 
+
   w = (float*)output_weights;   // 10x10
   curr_error = (float*)output_error;    // 1x10  (OUTPUT LABELS)
   errorRows = BATCH_SIZE;
   errorCols = NUM_LABELS;      // 10
+
 
   weightRows = HIDDEN_SIZE;     // 10
   weightCols = NUM_LABELS;      // 10
