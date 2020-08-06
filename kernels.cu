@@ -145,23 +145,26 @@ __global__ void mseDevice(
         return;
     }
 
-    // Now go through each of the output values and calculate the MSE
-    float err = 0;
-    for (int j = 0; j < numLabels; j++) {
-        int o_idx = j + batchId * numLabels;
+    if (batchId < batchSize) {
 
-        if (t_idx == j) {
-            // If this is the same as the expected output
-            float diff = 1 - d_O[o_idx];
-            err += diff * diff;
+        // Now go through each of the output values and calculate the MSE
+        float err = 0;
+        for (int j = 0; j < numLabels; j++) {
+            int o_idx = j + batchId * numLabels;
+
+            if (t_idx == j) {
+                // If this is the same as the expected output
+                float diff = 1 - d_O[o_idx];
+                err += diff * diff;
+            }
+            else {
+                float diff = d_O[o_idx];
+                err += diff * diff;
+            }
         }
-        else {
-            float diff = d_O[o_idx];
-            err += diff * diff;
-        }
+        d_sampleSquareErr[batchId] = err;
     }
-    d_sampleSquareErr[batchId] = err;
-    
+
     __syncthreads();
 
     // Calculate the square error for the batch
