@@ -4,7 +4,7 @@
 #include "data.h"
 
 
-#define HIDDEN_SIZE (2)    // number of neurons in hidden layer
+#define HIDDEN_SIZE (30)    // number of neurons in hidden layer
 #define BATCH_SIZE (1)     // number of examples between weight updates
 
 struct History{

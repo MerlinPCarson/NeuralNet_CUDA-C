@@ -15,6 +15,7 @@
 *.tlog
 *.idb
 *.exe
+*.csv
 Win/mnist/.vs/mnist/v16/.suo
 Win/mnist/x64/Debug/mnist.lib
 Win/mnist/x64/Debug/mnist.vcxproj.FileListAbsolute.txt

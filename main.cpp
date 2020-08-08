@@ -10,7 +10,7 @@
 
 
 // If TESTING macro is uncommented, load a subset of dataset 
-#define TESTING
+//#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
@@ -23,7 +23,8 @@ int main(int argc, char * argv[])
 {
 
   // set random seed
-  srand(time(NULL));
+  //srand(time(NULL));
+  srand(42);
 
   // number of examples to load from each dataset
   int trainSize = TRAIN_SIZE;
@@ -64,7 +65,7 @@ int main(int argc, char * argv[])
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 2;
+  int numEpochs = 10;
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, numEpochs);
 

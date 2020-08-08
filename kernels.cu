@@ -135,33 +135,38 @@ __global__ void mseDevice(
     )
 {
     int batchId = blockIdx.x * blockDim.x + threadIdx.x;
-    int t_idx = d_T[batchId];
-
-    *batchLoss = 0;
-    
-    // Sanity check
-    if (t_idx >= numLabels) {
-        printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
-        return;
-    }
-
-    // Now go through each of the output values and calculate the MSE
-    float err = 0;
-    for (int j = 0; j < numLabels; j++) {
-        int o_idx = j + batchId * numLabels;
-
-        if (t_idx == j) {
-            // If this is the same as the expected output
-            float diff = 1 - d_O[o_idx];
-            err += diff * diff;
-        }
-        else {
-            float diff = d_O[o_idx];
-            err += diff * diff;
-        }
-    }
-    d_sampleSquareErr[batchId] = err;
-    
+    if(batchId < batchSize){
+      int t_idx = d_T[batchId];
+      //printf("batch ID: %d, target: %f\n", batchId, d_T[batchId]);
+  
+      *batchLoss = 0;
+      
+      // Sanity check
+      if (t_idx >= numLabels) {
+          printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
+          return;
+      }
+  
+      // Now go through each of the output values and calculate the MSE
+      float err = 0;
+      for (int j = 0; j < numLabels; j++) {
+          int o_idx = j + batchId * numLabels;
+  
+          if (t_idx == j) {
+              // If this is the same as the expected output
+              float diff = 1 - d_O[o_idx];
+//              printf("diff: %f", diff);
+              err += diff * diff;
+          }
+          else {
+              float diff = d_O[o_idx];
+//              printf("diff: %f", diff);
+              err += diff * diff;
+          }
+      }
+      //printf("err: %f\n", err);
+      d_sampleSquareErr[batchId] = err;
+    } 
     __syncthreads();
 
     // Calculate the square error for the batch
@@ -173,6 +178,7 @@ __global__ void mseDevice(
         }
         *batchLoss /= (float)2;
         *batchLoss /= (float)batchSize;
+//        printf("batch err: %f\n", *batchLoss);
     }
 }
 
@@ -211,6 +217,8 @@ float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
     dim3 gridDim((int)ceil((float)batchSize / BLOCK_WIDTH), 1, 1);
     dim3 blockDim(BLOCK_WIDTH, 1, 1);
 
+    //printf("Activations:\n");
+    //printMatrix(h_O, batchSize, numLabels);
     // Call the kernel
     mseDevice<<<gridDim, blockDim>>>(d_T, d_O, d_sampleSquareErr, d_batchLoss, batchSize, numLabels);
 
@@ -499,7 +507,7 @@ __global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, i
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        d_w[index] += eta * d_dotP[index] + alpha * d_w[index];
+        d_w[index] += eta * d_dotP[index];// + alpha * d_w[index];
     }
 
 }
@@ -597,6 +605,11 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   // copy back to the host because we need delta K for the dotP
   cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * outCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
+
+//  printf("Delta K\n");
+//  printMatrix(delta_k, outRows, outCols);
+//  printf("\n");
+
   int delta_kRows = outRows;
   int delta_kCols = outCols;
   
@@ -609,9 +622,16 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
   dotP = (float*)malloc(pRows*pCols*sizeof(float));
   //     output weights    dot  output error Transposed = dotP
   //                2x10    @      10x1   = 2x1
-  //HIDDEN_SIZE x NUM_LABEL @  BATCH SIZE x  NUMLABEL  = HIDDEN_SIZE x BATCHSIZE
-  dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, delta_kCols, delta_kRows);
-  
+  //HIDDEN_SIZE x NUM_LABEL @  NUM_LABEL x BATCH_SIZE  = HIDDEN_SIZE x BATCHSIZE
+  //dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, delta_kCols, delta_kRows);
+  //printf("delta_kCols %d, delta_kRows %d", delta_kCols, delta_kRows);
+  dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, NUM_LABELS, BATCH_SIZE);
+ 
+
+//  printf("Delta Ja\n");
+//  printMatrix(dotP, HIDDEN_SIZE, BATCH_SIZE);
+//  printf("\n");
+
   
   
   // Prep for hidden error
@@ -632,10 +652,18 @@ void error_function(int t, float* z, float* h, float* output_weights, float* del
 
   hiddenError<<<dimGrid2, dimBlock2>>>(d_j, d_dotP, d_h, hiddenRows, hiddenCols );
   
+//  printf("hidden activations\n");
+//  printMatrix(h, BATCH_SIZE, HIDDEN_SIZE);
+//  printf("\n");
+
   // copy back to the host variables
   cudaStatus = cudaMemcpy(delta_j, d_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
   
+//  printf("Delta J\n");
+//  printMatrix(delta_j, hiddenRows, hiddenCols);
+//  printf("\n");
+
 
   // deallocate device memory
   cudaFree(d_z);
@@ -682,6 +710,13 @@ void update_weights(float eta, float alpha, float* weights, int wRows, int wCols
                           
   // output-hidden    (1x10) hidden activations  DOT  error(1x10)
   // hidden-input     (1x785) inputs  DOT  error(1x10) 
+//  if(wRows == HIDDEN_SIZE){
+//    printf("pre update\n");
+//    printMatrix(weights, wRows, wCols);
+//
+//    printf("errors\n");
+//    printMatrix(dotP, wRows, wCols);
+//  }
   updateWeights<<<dimGrid, dimBlock>>>(eta, alpha, d_dotP, wRows, wCols, d_w);
 
   
@@ -689,6 +724,10 @@ void update_weights(float eta, float alpha, float* weights, int wRows, int wCols
   cudaStatus = cudaMemcpy(weights, d_w,  wRows * wCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
   
+  //if(wRows == HIDDEN_SIZE){
+  //  printf("post update\n");
+  //  printMatrix(weights, wRows, wCols);
+  //}
     
     // deallocate device memory
   cudaFree(d_w);

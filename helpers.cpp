@@ -93,6 +93,7 @@ float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
     // Update the error table
     for (int i = 0; i < batchSize; i++) {
         int t_idx = h_T[i];
+     //   printf("target: %f\n", h_T[i]);
     
         // Sanity check
         if (t_idx >= numLabels) {
@@ -116,10 +117,12 @@ float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
             }
         }
 
+    //    printf("err: %f\n", err);
         err /= 2;
         batchLoss += err;
     }
 
+    //printf("batch err: %f\n", batchLoss/batchSize);
     return batchLoss / (float)batchSize;
 }
 
