@@ -79,6 +79,14 @@ void saveHistory(History history, const char* fileName){
   }
   file << std::endl;
 
+  // write comma seprated test accuracies to file with newline at end
+  file << history.testAcc[0];
+  for(int i = 1; i < history.testAcc.size(); ++i){
+    file << ',';
+    file << history.testAcc[i];
+  }
+  file << std::endl;
+
   // close file
   file.close();
 

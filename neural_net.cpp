@@ -13,6 +13,7 @@
 //#define DEBUG 
 //#define SHOW_PREDS 
 //#define SHOW_BATCH
+#define TEST_MODEL
 #define USE_GPU
 
 NeuralNet::NeuralNet(){
@@ -72,13 +73,18 @@ void NeuralNet::init_weights(){
 }
 
 // training function
-History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs){
+History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testSet, int num_epochs){
 
   // time at start epoch
   auto start = std::chrono::steady_clock::now();
 
   int * order = new int[trainSet.size()];
   int * valOrder = new int[valSet.size()];
+
+  // for testing model
+  std::vector<unsigned short> preds;
+  std::vector<unsigned short> targets;
+  float testAccuracy = 0.0;
 
   // validation order is shuffled
   for(int i = 0; i < valSet.size(); ++i){
@@ -175,12 +181,20 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
     std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
     std::cout << " [epoch time: " <<  elapsedSeconds.count() << " seconds]\n";
 
+#ifdef TEST_MODEL
+    // test model
+    predict(testSet, preds, targets);
+    testAccuracy = accuracy(preds, targets);
+    printf("test set accuracy: %.4f, ", testAccuracy);
+#endif // TEST_MODEL
+
     // show epoch losses
     std::cout << "loss: " << loss << ", validation loss: " << valLoss << std::endl;
 
     // add epoch losses to history
     history.loss.push_back(loss);
     history.valLoss.push_back(valLoss);
+    history.testAcc.push_back(testAccuracy);
 
     // reset losses for next epoch
     loss = 0.0;

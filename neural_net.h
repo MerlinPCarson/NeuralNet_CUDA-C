@@ -4,12 +4,13 @@
 #include "data.h"
 
 
-#define HIDDEN_SIZE (30)    // number of neurons in hidden layer
+#define HIDDEN_SIZE (300)    // number of neurons in hidden layer
 #define BATCH_SIZE (1)     // number of examples between weight updates
 
 struct History{
   std::vector<float> loss;
   std::vector<float> valLoss;
+  std::vector<float> testAcc;
 };
 
 class NeuralNet{
@@ -19,7 +20,7 @@ class NeuralNet{
         NeuralNet();
         NeuralNet(float eta, float alpha);
 
-        History fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs);
+        History fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testSet, int num_epochs);
         void predict(std::vector<Data> &testData, std::vector<unsigned short> &pred, std::vector<unsigned short> &target);
         float accuracy(std::vector<unsigned short> &pred, std::vector<unsigned short> &targets);
 

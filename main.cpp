@@ -59,7 +59,7 @@ int main(int argc, char * argv[])
 #endif // TESTING
 
   // instantiate neural network with learning rate
-  float learning_rate = 0.01;
+  float learning_rate = 0.1;
   float alpha = 0.9;  // for momentum
   NeuralNet model = NeuralNet(learning_rate, alpha);
 
@@ -67,20 +67,20 @@ int main(int argc, char * argv[])
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 2;
+  int numEpochs = 100;
   std::cout << "\nBeginning Training\n";
-  History history = model.fit(trainSet, valSet, numEpochs);
+  History history = model.fit(trainSet, valSet, testData, numEpochs);
 
-  // test model
-  std::vector<unsigned short> preds;
-  std::vector<unsigned short> targets;
-  model.predict(testData, preds, targets);
-
-  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
-
-  // total time to run program 
+  // total time to run training 
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
-  std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";
+  std::cout << "\nTotal training time: " <<  elapsedSeconds.count() << " seconds\n";
+
+//  // test model
+//  std::vector<unsigned short> preds;
+//  std::vector<unsigned short> targets;
+//  model.predict(testData, preds, targets);
+//
+//  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
 
   saveHistory(history, "model_history.csv");
 
