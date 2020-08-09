@@ -155,16 +155,13 @@ __global__ void mseDevice(
           if (t_idx == j) {
               // If this is the same as the expected output
               float diff = 1 - d_O[o_idx];
-//              printf("diff: %f", diff);
               err += diff * diff;
           }
           else {
               float diff = d_O[o_idx];
-//              printf("diff: %f", diff);
               err += diff * diff;
           }
       }
-      //printf("err: %f\n", err);
       d_sampleSquareErr[batchId] = err;
     } 
     __syncthreads();
@@ -178,7 +175,6 @@ __global__ void mseDevice(
         }
         *batchLoss /= (float)2;
         *batchLoss /= (float)batchSize;
-//        printf("batch err: %f\n", *batchLoss);
     }
 }
 
@@ -218,8 +214,6 @@ float MSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels)
     dim3 gridDim((int)ceil((float)batchSize / BLOCK_WIDTH), 1, 1);
     dim3 blockDim(BLOCK_WIDTH, 1, 1);
 
-    //printf("Activations:\n");
-    //printMatrix(h_O, batchSize, numLabels);
     // Call the kernel
     mseDevice<<<gridDim, blockDim>>>(d_T, d_O, d_sampleSquareErr, d_batchLoss, batchSize, numLabels);
 
@@ -492,10 +486,7 @@ __global__ void scalarMultiplication(double scalar, double* M, int Rows, int Col
         M[r*Cols + c] *= scalar;
 }
 
-
-
-
-__global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, int Cols, float* d_w){
+__global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, int Cols, float* d_w, float* d_delta_weights){
     /*
         w -- set of weights being updated
         error -- the error by which the weights need to be updated
@@ -508,7 +499,8 @@ __global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, i
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        d_w[index] += eta * d_dotP[index]/BATCH_SIZE;// + alpha * d_w[index];
+        d_delta_weights[index] = eta * d_dotP[index]/BATCH_SIZE + alpha * d_delta_weights[index];
+        d_w[index] += d_delta_weights[index];
     }
 
 }
@@ -526,9 +518,7 @@ __global__ void outputError(float* d_error, unsigned short* t, float* d_out_laye
     
     if(r < Rows && c < Cols){ 
         int index = r*Cols + c;
-        //printf("target: %hu, index: %d\n", t[r], c);
         if(t[r] == c)
-            // 2x10               2x10                    2x10                1        2x10
             d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (1 - d_out_layer[index]);
         else 
             d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (0 - d_out_layer[index]);
@@ -550,7 +540,6 @@ __global__ void hiddenError(float* d_error, float* d_dotP, float* d_hidden_layer
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        // 2x10               2x10                      2x10                     2x10
         d_error[index] = d_hidden_layer[index] * (1 - d_hidden_layer[index]) * (d_dotP[index]);
     }
 
@@ -564,10 +553,6 @@ void error_function(unsigned short * t, float* z, float* h, float* output_weight
     //--------------  DEEIVCE Prep ----------------------
   float *d_z, *d_h, *d_k, *d_j;
   unsigned short *d_t;
-  float *dotP, *d_dotP; 
-  int outRows    = BATCH_SIZE,  outCols    = NUM_LABELS;
-  int hiddenRows = BATCH_SIZE,  hiddenCols = HIDDEN_SIZE;
-  
   
   cudaError_t cudaStatus;
   cudaStatus = cudaMalloc((void**)&d_t, BATCH_SIZE * sizeof(unsigned short));
@@ -575,127 +560,89 @@ void error_function(unsigned short * t, float* z, float* h, float* output_weight
   cudaStatus = cudaMemcpy(d_t, t, BATCH_SIZE * sizeof(unsigned short), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
   
-  cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
+  cudaStatus = cudaMalloc((void**)&d_z, BATCH_SIZE * NUM_LABELS * sizeof(float));
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_z, z, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-  
-  cudaStatus = cudaMalloc((void**)&d_h, hiddenRows * hiddenCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_h, h, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaStatus = cudaMemcpy(d_z, z, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
   
+  cudaStatus = cudaMalloc((void**)&d_h, BATCH_SIZE * HIDDEN_SIZE * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_h, h, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
   
-  cudaStatus = cudaMalloc((void**)&d_k, outRows * outCols * sizeof(float));
+  cudaStatus = cudaMalloc((void**)&d_k, BATCH_SIZE * NUM_LABELS * sizeof(float));
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_k, delta_k, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaStatus = cudaMemcpy(d_k, delta_k, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
   
-  cudaStatus = cudaMalloc((void**)&d_j, hiddenRows * hiddenCols * sizeof(float));
+  cudaStatus = cudaMalloc((void**)&d_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float));
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_j, delta_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaStatus = cudaMemcpy(d_j, delta_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
     
   
   // call kernel for weight update for each thread to update a weight
-  int blockX = ceil((float)outRows/BLOCK_WIDTH);
-  int blockY = ceil((float)outCols/BLOCK_WIDTH);
+  int blockX = ceil((float)BATCH_SIZE/BLOCK_WIDTH);
+  int blockY = ceil((float)NUM_LABELS/BLOCK_WIDTH);
   int threadX = BLOCK_WIDTH;
   int threadY = BLOCK_WIDTH;
   dim3 dimGrid(blockX,   blockY,  1);
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep  ----------------------
 
-//  for(int i=0; i < BATCH_SIZE; ++i){
-//    printf("target: %hu ", t[i]);  
-//  }
-
-  outputError<<<dimGrid, dimBlock>>>(d_k, d_t, d_z, outRows, outCols ); 
-
+  outputError<<<dimGrid, dimBlock>>>(d_k, d_t, d_z, BATCH_SIZE, NUM_LABELS); 
   
   // copy back to the host because we need delta K for the dotP
-  cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * outCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
 
-//  printf("Delta K\n");
-//  printMatrix(delta_k, outRows, outCols);
-//  printf("\n");
-
-  int delta_kRows = outRows;
-  int delta_kCols = outCols;
-  
-
   float* errorTransposed;
-  errorTransposed = (float*)malloc(outRows*outCols*sizeof(float));
-  transpose(delta_k, errorTransposed, outRows, outCols);
+  errorTransposed = (float*)malloc(BATCH_SIZE*NUM_LABELS*sizeof(float));
+  transpose(delta_k, errorTransposed, BATCH_SIZE, NUM_LABELS);
   
-  int pRows = HIDDEN_SIZE,   pCols = BATCH_SIZE;
-  dotP = (float*)malloc(pRows*pCols*sizeof(float));
-  //     output weights    dot  output error Transposed = dotP
-  //                2x10    @      10x1   = 2x1
-  //HIDDEN_SIZE x NUM_LABEL @  NUM_LABEL x BATCH_SIZE  = HIDDEN_SIZE x BATCHSIZE
-  //dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, delta_kCols, delta_kRows);
-  //printf("delta_kCols %d, delta_kRows %d", delta_kCols, delta_kRows);
+  float *dotP, *d_dotP; 
+  dotP = (float*)malloc(HIDDEN_SIZE*BATCH_SIZE*sizeof(float));
   dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, NUM_LABELS, BATCH_SIZE);
- 
-
-//  printf("Delta Ja\n");
-//  printMatrix(dotP, HIDDEN_SIZE, BATCH_SIZE);
-//  printf("\n");
-
-  
   
   // Prep for hidden error
-  blockX = ceil((float)hiddenCols/BLOCK_WIDTH);
-  blockY = ceil((float)hiddenRows/BLOCK_WIDTH);
+  blockX = ceil((float)HIDDEN_SIZE/BLOCK_WIDTH);
+  blockY = ceil((float)BATCH_SIZE/BLOCK_WIDTH);
   threadX = BLOCK_WIDTH;
   threadY = BLOCK_WIDTH;
   dim3 dimGrid2(blockX,   blockY,  1);
   dim3 dimBlock2(threadX, threadY, 1);
   
-  
   // used for the dot product of output error and output weights
-  cudaStatus = cudaMalloc((void**)&d_dotP, pRows * pCols * sizeof(float));
+  cudaStatus = cudaMalloc((void**)&d_dotP, HIDDEN_SIZE * BATCH_SIZE * sizeof(float));
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_dotP, dotP, pRows * pCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaStatus = cudaMemcpy(d_dotP, dotP, HIDDEN_SIZE * BATCH_SIZE * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
-  
 
-  hiddenError<<<dimGrid2, dimBlock2>>>(d_j, d_dotP, d_h, hiddenRows, hiddenCols );
-  
-//  printf("hidden activations\n");
-//  printMatrix(h, BATCH_SIZE, HIDDEN_SIZE);
-//  printf("\n");
+  hiddenError<<<dimGrid2, dimBlock2>>>(d_j, d_dotP, d_h, BATCH_SIZE, HIDDEN_SIZE );
 
   // copy back to the host variables
-  cudaStatus = cudaMemcpy(delta_j, d_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaStatus = cudaMemcpy(delta_j, d_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
   
-//  printf("Delta J\n");
-//  printMatrix(delta_j, hiddenRows, hiddenCols);
-//  printf("\n");
-
-
   // deallocate device memory
   cudaFree(d_z);
   cudaFree(d_h);
   cudaFree(d_k);
   cudaFree(d_j);
+  cudaFree(d_t);
   cudaFree(d_dotP);
-
   
   free(errorTransposed);
   free(dotP);
 }
 
-
-void update_weights(float eta, float alpha, float* weights, int wRows, int wCols, float* dotP, int pRows, int pCols){
+void update_weights(float eta, float alpha, float* weights, int wRows, int wCols, float* dotP, float * delta_weights){
 /*
-    dotP -- error Transposed @ current layer activations
+    dotP -- layer activations transposed x layer errors
 */
 
   //--------------  DEEIVCE Prep ----------------------
-  float *d_w,  *d_dotP;
+  float *d_w,  *d_dotP, *d_delta_weights;
 
   cudaError_t cudaStatus;    
   cudaStatus = cudaMalloc((void**)&d_w, wRows * wCols * sizeof(float));
@@ -703,11 +650,15 @@ void update_weights(float eta, float alpha, float* weights, int wRows, int wCols
   cudaStatus = cudaMemcpy(d_w, weights, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
 
-  cudaStatus = cudaMalloc((void**)&d_dotP, pRows * pCols * sizeof(float));
+  cudaStatus = cudaMalloc((void**)&d_dotP, wRows * wCols * sizeof(float));
   cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(  d_dotP,  dotP, pRows * pCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaStatus = cudaMemcpy( d_dotP,  dotP, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
   cudaCheckError(cudaStatus);
 
+  cudaStatus = cudaMalloc((void**)&d_delta_weights, wRows * wCols * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_delta_weights,  delta_weights, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
 
   // call kernel for weight update for each thread to update a weight
   int blockX = ceil((float)wCols / BLOCK_WIDTH);
@@ -718,29 +669,19 @@ void update_weights(float eta, float alpha, float* weights, int wRows, int wCols
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep ----------------------
 
-                          
-  // output-hidden    (1x10) hidden activations  DOT  error(1x10)
-  // hidden-input     (1x785) inputs  DOT  error(1x10) 
-//  if(wRows == HIDDEN_SIZE){
-//    printf("pre update\n");
-//    printMatrix(weights, wRows, wCols);
-//
-//    printf("errors\n");
-//    printMatrix(dotP, wRows, wCols);
-//  }
-  updateWeights<<<dimGrid, dimBlock>>>(eta, alpha, d_dotP, wRows, wCols, d_w);
+  updateWeights<<<dimGrid, dimBlock>>>(eta, alpha, d_dotP, wRows, wCols, d_w, d_delta_weights);
 
   
-    // copy back to the host variables
+  // copy back to the host variables
   cudaStatus = cudaMemcpy(weights, d_w,  wRows * wCols * sizeof(float), cudaMemcpyDeviceToHost);
   cudaCheckError(cudaStatus);
   
-  //if(wRows == HIDDEN_SIZE){
-  //  printf("post update\n");
-  //  printMatrix(weights, wRows, wCols);
-  //}
-    
-    // deallocate device memory
+  // copy back to the host variables
+  cudaStatus = cudaMemcpy(delta_weights, d_delta_weights,  wRows * wCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+  
+  // deallocate device memory
   cudaFree(d_w);
   cudaFree(d_dotP);
+  cudaFree(d_delta_weights);
 }

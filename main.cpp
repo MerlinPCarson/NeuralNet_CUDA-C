@@ -59,13 +59,15 @@ int main(int argc, char * argv[])
 #endif // TESTING
 
   // instantiate neural network with learning rate
-  NeuralNet model = NeuralNet(0.01);
+  float learning_rate = 0.01;
+  float alpha = 0.9;  // for momentum
+  NeuralNet model = NeuralNet(learning_rate, alpha);
 
   // time program started 
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 30;
+  int numEpochs = 2;
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, numEpochs);
 
