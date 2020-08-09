@@ -77,7 +77,7 @@ void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, s
   delete order;
 }
 
-void print_digit(float * digit, int label){
+void print_digit(float * digit, unsigned short label){
 
   int count = 0;
   for (int i = 0; i < HEIGHT; ++i){

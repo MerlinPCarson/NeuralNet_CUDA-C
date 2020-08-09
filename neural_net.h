@@ -20,23 +20,23 @@ class NeuralNet{
         NeuralNet(float eta);
 
         History fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs);
-        void predict(std::vector<Data> &testData, std::vector<int> &pred, std::vector<int> &target);
-        float accuracy(std::vector<int> &pred, std::vector<int> &targets);
+        void predict(std::vector<Data> &testData, std::vector<unsigned short> &pred, std::vector<unsigned short> &target);
+        float accuracy(std::vector<unsigned short> &pred, std::vector<unsigned short> &targets);
 
     private:
 
         void init_weights();
         void show_weights();
-        void error(float t);
+        void error(unsigned short t);
         void update_hidden_weights();
         void update_input_weights(float batch[][NUM_FEATURES]);
 
         // need softmax function
 
-        void make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum);
+        void make_batch(float batch[][NUM_FEATURES], unsigned short * target, std::vector<Data> &dataSet, int * order, int batchNum);
 
         void forward(float batch[][NUM_FEATURES]);
-        void backward(float batch[][NUM_FEATURES], float* t);
+        void backward(float batch[][NUM_FEATURES], unsigned short * t);
 
         float eta;            // learning rate
         float alpha;          // momentum

@@ -33,13 +33,13 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
-void hostBatchPreds(float *output_activations, int *batch_pred, int output_size, int b_size)
+void hostBatchPreds(float *output_activations, unsigned short *batch_pred, int output_size, int b_size)
 {
     for(int i = 0; i < b_size; ++i)
     {
-        int counter = 0;
+        unsigned short counter = 0;
         float maxValue = output_activations[i*output_size];
-        for(int j = 1; j < output_size; ++j)
+        for(unsigned short j = 1; j < output_size; ++j)
         {
             int idx = j + i*output_size;
             if(output_activations[idx] > maxValue)
@@ -86,13 +86,13 @@ void saveHistory(History history, const char* fileName){
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
-float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
+float hostMSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels)
 {
     float batchLoss = 0.0;
 
     // Update the error table
     for (int i = 0; i < batchSize; i++) {
-        int t_idx = h_T[i];
+        unsigned short t_idx = h_T[i];
      //   printf("target: %f\n", h_T[i]);
     
         // Sanity check

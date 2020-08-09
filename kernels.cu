@@ -22,14 +22,14 @@ __global__ void elementMultDevice(float *d_M, float *d_N, float *d_P, int num_MR
     }
 }
 
-__global__ void batchPredsDevice(float * out_activations, int * batch, int output_size, int batch_size)
+__global__ void batchPredsDevice(float * out_activations, unsigned short * batch, int output_size, int batch_size)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(row < batch_size && col == 0)
     {
-        int counter = 0;
+        unsigned short counter = 0;
         float maxValue = out_activations[row * output_size];
         for(int i = 1; i < output_size; ++i)
         {
@@ -126,7 +126,7 @@ __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRo
 // numRows = batch size
 // d_sampleSquareErr: array to store the square error for each sample
 __global__ void mseDevice(
-    float *d_T,
+    unsigned short *d_T,
     float *d_O,
     float *d_sampleSquareErr,
     float *batchLoss,
@@ -188,14 +188,15 @@ __global__ void mseDevice(
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
-float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
+float MSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels)
 {
     float h_batchLoss = 0;
-    float *d_T, *d_O, *d_sampleSquareErr, *d_batchLoss;
+    unsigned short *d_T;
+    float *d_O, *d_sampleSquareErr, *d_batchLoss;
     cudaError_t cudaStatus;
 
     // Allocate memory for device variables
-    cudaStatus = cudaMalloc((void**)&d_T, batchSize * sizeof(float));
+    cudaStatus = cudaMalloc((void**)&d_T, batchSize * sizeof(unsigned short));
     cudaCheckError(cudaStatus);
 
     cudaStatus = cudaMalloc((void**)&d_O, batchSize * numLabels * sizeof(float));
@@ -208,7 +209,7 @@ float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
     cudaCheckError(cudaStatus);
     
     // Copy data to GPU
-    cudaStatus = cudaMemcpy(d_T, h_T, batchSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(d_T, h_T, batchSize * sizeof(unsigned short), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
     cudaStatus = cudaMemcpy(d_O, h_O, batchSize * numLabels * sizeof(float), cudaMemcpyHostToDevice);
@@ -396,17 +397,17 @@ void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols)
     cudaFree(d_N);
 }
 
-void batchPreds(float * h_activations, int * h_batchPreds, int activation_size, int b_size)
+void batchPreds(float * h_activations, unsigned short * h_batchPreds, int activation_size, int b_size)
 {
     float *d_activations;
-    int *d_batchPreds;
+    unsigned short *d_batchPreds;
     cudaError_t cudaStatus;
 
     // Allocate memory for device variables
     cudaStatus = cudaMalloc((void**)&d_activations, activation_size* b_size* sizeof(float));
     cudaCheckError(cudaStatus);
 
-    cudaStatus = cudaMalloc((void**)&d_batchPreds, activation_size * sizeof(int));
+    cudaStatus = cudaMalloc((void**)&d_batchPreds, activation_size * sizeof(unsigned short));
     cudaCheckError(cudaStatus);
 
     // Copy data to GPU
@@ -422,7 +423,7 @@ void batchPreds(float * h_activations, int * h_batchPreds, int activation_size, 
     batchPredsDevice<<<gridDim, blockDim>>>(d_activations, d_batchPreds, activation_size, b_size);
 
     //copy back to host
-    cudaStatus = cudaMemcpy(h_batchPreds, d_batchPreds, activation_size * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaStatus = cudaMemcpy(h_batchPreds, d_batchPreds, activation_size * sizeof(unsigned short), cudaMemcpyDeviceToHost);
     cudaCheckError(cudaStatus);
 
     cudaFree(d_activations);
@@ -557,7 +558,7 @@ __global__ void hiddenError(float* d_error, float* d_dotP, float* d_hidden_layer
 
 
 
-void error_function(int t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
+void error_function(unsigned short t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
     
     //--------------  DEEIVCE Prep ----------------------
   float *d_z, *d_h, *d_k, *d_j;

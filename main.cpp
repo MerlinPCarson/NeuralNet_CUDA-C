@@ -10,7 +10,7 @@
 
 
 // If TESTING macro is uncommented, load a subset of dataset 
-//#define TESTING
+#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
@@ -70,8 +70,8 @@ int main(int argc, char * argv[])
   History history = model.fit(trainSet, valSet, numEpochs);
 
   // test model
-  std::vector<int> preds;
-  std::vector<int> targets;
+  std::vector<unsigned short> preds;
+  std::vector<unsigned short> targets;
   model.predict(testData, preds, targets);
 
   std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;

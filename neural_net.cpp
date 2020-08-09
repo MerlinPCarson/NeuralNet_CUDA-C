@@ -84,7 +84,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   }
 
   float batch[BATCH_SIZE][NUM_FEATURES];
-  float target[BATCH_SIZE];
+  unsigned short target[BATCH_SIZE];
 
   int numTrainBatches = floor(trainSet.size()/BATCH_SIZE);
   int numValBatches = floor(valSet.size()/BATCH_SIZE);
@@ -200,7 +200,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   return history;
 }
 
-void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, std::vector<int> &targets){
+void NeuralNet::predict(std::vector<Data> &testData, std::vector<unsigned short> &preds, std::vector<unsigned short> &targets){
 
   int * testOrder = new int[testData.size()];
 
@@ -210,8 +210,8 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
   }
 
   float batch[BATCH_SIZE][NUM_FEATURES];
-  float target[BATCH_SIZE];
-  int batch_pred[BATCH_SIZE];
+  unsigned short target[BATCH_SIZE];
+  unsigned short batch_pred[BATCH_SIZE];
 
   int numTestBatches = floor(testData.size()/BATCH_SIZE);
 
@@ -238,7 +238,7 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
     // add predictions and targets to output vectors
       for(int j = 0; j < BATCH_SIZE; ++j){
         preds.push_back(batch_pred[j]);
-        targets.push_back((int)target[j]);
+        targets.push_back(target[j]);
 
 #ifdef SHOW_PREDS 
         print_digit(batch[j], target[j]);
@@ -252,7 +252,7 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
 }
 
 // Calculates accuracy of the passed in set.
-float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
+float NeuralNet::accuracy(std::vector<unsigned short> &pred, std::vector<unsigned short> &targets)
 {
     float acc = 0;
     
@@ -269,7 +269,7 @@ float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
 }
 
 // load batch of data from a dataset from a shuffled dataset
-void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum){
+void NeuralNet::make_batch(float batch[][NUM_FEATURES], unsigned short * target, std::vector<Data> &dataSet, int * order, int batchNum){
 
   // starting position in training set order for current batch
   int startIdx = batchNum * BATCH_SIZE;
@@ -333,16 +333,16 @@ void NeuralNet::show_weights(){
   }
 }
 
-void NeuralNet::backward(float train_batch[][NUM_FEATURES],  float* target){
-  for(int i = 0; i<BATCH_SIZE; ++i){
-    error(target[i]);
+void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * target){
+//  for(int i = 0; i<BATCH_SIZE; ++i){
+    error(target[0]);
     update_hidden_weights(); 
     update_input_weights(train_batch); 
-  }
+//  }
 }
 
 
-void NeuralNet::error(float t){
+void NeuralNet::error(unsigned short t){
   // t       -- target label
 
   error_function(t, (float*)output_activation, 
