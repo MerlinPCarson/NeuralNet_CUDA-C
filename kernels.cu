@@ -414,7 +414,7 @@ void batchPreds(float * h_activations, unsigned short * h_batchPreds, int activa
     cudaStatus = cudaMemcpy(d_activations, h_activations, activation_size * b_size * sizeof(float), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
-    cudaStatus = cudaMemcpy(d_batchPreds, h_batchPreds, activation_size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(d_batchPreds, h_batchPreds, activation_size * sizeof(unsigned short), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
     dim3 gridDim((int)ceil((float)activation_size / BLOCK_WIDTH), (int)ceil((float) b_size / BLOCK_WIDTH), 1);
@@ -508,12 +508,12 @@ __global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, i
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        d_w[index] += eta * d_dotP[index];// + alpha * d_w[index];
+        d_w[index] += eta * d_dotP[index]/BATCH_SIZE;// + alpha * d_w[index];
     }
 
 }
 
-__global__ void outputError(float* d_error, int t, float* d_out_layer, int Rows, int Cols){
+__global__ void outputError(float* d_error, unsigned short* t, float* d_out_layer, int Rows, int Cols){
     /*
         d_error   -- delta_k
         targets    -- one hot encode 1D array containing 0.9 for target label
@@ -526,7 +526,8 @@ __global__ void outputError(float* d_error, int t, float* d_out_layer, int Rows,
     
     if(r < Rows && c < Cols){ 
         int index = r*Cols + c;
-        if(t == index)
+        //printf("target: %hu, index: %d\n", t[r], c);
+        if(t[r] == c)
             // 2x10               2x10                    2x10                1        2x10
             d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (1 - d_out_layer[index]);
         else 
@@ -558,16 +559,22 @@ __global__ void hiddenError(float* d_error, float* d_dotP, float* d_hidden_layer
 
 
 
-void error_function(unsigned short t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
+void error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
     
     //--------------  DEEIVCE Prep ----------------------
   float *d_z, *d_h, *d_k, *d_j;
+  unsigned short *d_t;
   float *dotP, *d_dotP; 
   int outRows    = BATCH_SIZE,  outCols    = NUM_LABELS;
   int hiddenRows = BATCH_SIZE,  hiddenCols = HIDDEN_SIZE;
   
   
   cudaError_t cudaStatus;
+  cudaStatus = cudaMalloc((void**)&d_t, BATCH_SIZE * sizeof(unsigned short));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_t, t, BATCH_SIZE * sizeof(unsigned short), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
   cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
   cudaCheckError(cudaStatus);
   cudaStatus = cudaMemcpy(d_z, z, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
@@ -598,9 +605,12 @@ void error_function(unsigned short t, float* z, float* h, float* output_weights,
   dim3 dimGrid(blockX,   blockY,  1);
   dim3 dimBlock(threadX, threadY, 1);
   //--------------  END: DEEIVCE Prep  ----------------------
-  
 
-  outputError<<<dimGrid, dimBlock>>>(d_k, t, d_z, outRows, outCols ); 
+//  for(int i=0; i < BATCH_SIZE; ++i){
+//    printf("target: %hu ", t[i]);  
+//  }
+
+  outputError<<<dimGrid, dimBlock>>>(d_k, d_t, d_z, outRows, outCols ); 
 
   
   // copy back to the host because we need delta K for the dotP

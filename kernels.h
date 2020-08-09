@@ -15,7 +15,7 @@ float MSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels);
 void batchPreds(float * h_activations, unsigned short * h_backPreds, int activation_size, int b_size);
 
 // Backprop
-void error_function(unsigned short t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j);
+void error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j);
 void update_weights(float eta, float alpha, float* hidden_weights, int wRows, int wCols, float* dotP, int pRows, int pCols);
 __global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols);
 __global__ void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols);

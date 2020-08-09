@@ -289,7 +289,7 @@ void NeuralNet::make_batch(float batch[][NUM_FEATURES], unsigned short * target,
 void NeuralNet::forward(float batch[][NUM_FEATURES]){
 
 #ifdef DEBUG
-  //show_weights();
+  show_weights();
 #endif // DEBUG
 
 #ifdef USE_GPU
@@ -335,17 +335,17 @@ void NeuralNet::show_weights(){
 
 void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * target){
 //  for(int i = 0; i<BATCH_SIZE; ++i){
-    error(target[0]);
+    error(target);
     update_hidden_weights(); 
     update_input_weights(train_batch); 
 //  }
 }
 
 
-void NeuralNet::error(unsigned short t){
+void NeuralNet::error(unsigned short * target){
   // t       -- target label
 
-  error_function(t, (float*)output_activation, 
+  error_function(target, (float*)output_activation, 
                     (float*)hidden_activation, 
                     (float*)output_weights, 
                     (float*)output_error, 
@@ -416,7 +416,7 @@ void NeuralNet::update_hidden_weights(){
 //  printf("\n");
 
   //update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols);
-  update_weights(1.0, alpha, w, HIDDEN_SIZE, NUM_LABELS, dotP, HIDDEN_SIZE, NUM_LABELS);
+  update_weights(eta, alpha, w, HIDDEN_SIZE, NUM_LABELS, dotP, HIDDEN_SIZE, NUM_LABELS);
   
   //free(errorTransposed);
   free(hiddenActsT);
@@ -444,9 +444,9 @@ void NeuralNet::update_input_weights(float batch[BATCH_SIZE][NUM_FEATURES]){
   layerRows = BATCH_SIZE;       // hidden activation Rows
   layerCols = NUM_FEATURES;      //  input cols
 
-  float* errorTransposed;
-  errorTransposed = (float*)malloc(errorRows * errorCols * sizeof(float));
-  hostTranspose(curr_error, errorTransposed, errorRows, errorCols);
+//  float* errorTransposed;
+//  errorTransposed = (float*)malloc(errorRows * errorCols * sizeof(float));
+//  hostTranspose(curr_error, errorTransposed, errorRows, errorCols);
 
 //  printf("Hidden Error\n");
 //  printMatrix((float*)hidden_error, BATCH_SIZE, HIDDEN_SIZE);
@@ -475,9 +475,10 @@ void NeuralNet::update_input_weights(float batch[BATCH_SIZE][NUM_FEATURES]){
 //  printf("\n");
 
   //update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols );
-  update_weights(1.0, alpha, w, NUM_FEATURES, HIDDEN_SIZE, dotP, NUM_FEATURES, HIDDEN_SIZE );
+  update_weights(eta, alpha, w, NUM_FEATURES, HIDDEN_SIZE, dotP, NUM_FEATURES, HIDDEN_SIZE );
 
-  free(errorTransposed);
+  //free(errorTransposed);
+  free(batchT);
   free(dotP);
 }
 

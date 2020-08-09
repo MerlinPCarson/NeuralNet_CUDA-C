@@ -10,7 +10,7 @@
 
 
 // If TESTING macro is uncommented, load a subset of dataset 
-#define TESTING
+//#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
@@ -65,7 +65,7 @@ int main(int argc, char * argv[])
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 10;
+  int numEpochs = 30;
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, numEpochs);
 
