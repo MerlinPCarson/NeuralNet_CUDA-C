@@ -21,6 +21,7 @@ do {												\
 // various helper functions
 void printMatrix(float *X, int numRows, int numCols);
 void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
+void printConfusionMatrix(std::vector<int> &pred, std::vector<int> &target)
 void saveHistory(History history, const char* fileName);
 void saveDataToFile(std::ofstream &file, std::vector<float> &data);
 int cudaDeviceProperties();

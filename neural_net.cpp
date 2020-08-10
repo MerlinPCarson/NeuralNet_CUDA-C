@@ -278,6 +278,7 @@ float NeuralNet::accuracy(std::vector<unsigned short> &pred, std::vector<unsigne
     return acc / pred.size();
 }
 
+
 // load batch of data from a dataset from a shuffled dataset
 void NeuralNet::make_batch(float batch[][NUM_FEATURES], unsigned short * target, std::vector<Data> &dataSet, int * order, int batchNum){
 
