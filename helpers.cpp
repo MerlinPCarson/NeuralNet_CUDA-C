@@ -22,6 +22,36 @@ void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::v
   print_digit(testData[testData.size()-1].value, testData[testData.size()-1].label);
 }
 
+void printConfusionMatrix(std::vector<int> &pred, std::vector<int> &target)
+{
+    int conMatrix[NUM_LABELS][NUM_LABELS];
+    if(pred.size() != target.size())
+    {
+        printf("Vector sizes do not match\n");
+        exit(-1);
+    }
+
+    for(int i = 0; i < NUM_LABELS; i++) 
+    {
+        for(int j = 0; j < NUM_LABELS; j++)
+        {
+            conMatrix[i][j] = 0;
+        }
+    }
+
+    for (auto it1 = pred.begin(), it2 = target.begin(); it1 != pred.end() && it2 != target.end(); it1++, it2++) {
+        ++conMatrix[*it1][*it2];
+    }
+
+    for (int i = 0; i < NUM_LABELS; i++) {
+        for (int j = 0; j < NUM_LABELS; j++) {
+            printf("%d ", conMatrix[i][j]);
+        }
+        printf("\n");
+    }
+
+}
+
 void printMatrix(float *X, int numRows, int numCols)
 {
     for (int i = 0; i < numRows; i++) {
