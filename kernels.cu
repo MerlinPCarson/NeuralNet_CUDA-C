@@ -135,6 +135,7 @@ __global__ void mseDevice(
     )
 {
     int batchId = blockIdx.x * blockDim.x + threadIdx.x;
+    
     if(batchId < batchSize){
       int t_idx = d_T[batchId];
       //printf("batch ID: %d, target: %f\n", batchId, d_T[batchId]);
@@ -142,7 +143,7 @@ __global__ void mseDevice(
       *batchLoss = 0;
       
       // Sanity check
-      if (t_idx >= numLabels) {
+      if ((t_idx < 0) || (t_idx >= numLabels)) {
           printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
           return;
       }
@@ -164,6 +165,7 @@ __global__ void mseDevice(
       }
       d_sampleSquareErr[batchId] = err;
     } 
+
     __syncthreads();
 
     // Calculate the square error for the batch
