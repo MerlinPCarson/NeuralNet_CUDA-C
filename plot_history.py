@@ -14,7 +14,7 @@ def plot_loss(loss, val_loss):
     plt.plot(epochs, loss, label='Training')
     plt.plot(epochs, val_loss, label='Validation')
 
-    plt.title('Training Curves')
+    plt.title('Model Error')
     plt.legend()
     plt.grid()
     plt.ylabel('loss')
@@ -30,7 +30,7 @@ def plot_acc(accs):
 
     plt.plot(epochs, accs, label='Test set')
 
-    plt.title('Accuracy')
+    plt.title('Model Accuracy')
     plt.legend()
     plt.grid()
     plt.ylabel('accuracy')
@@ -48,12 +48,6 @@ def load_history(history_file):
         preds = [int(val) for val in f.readline().split(',')]
         targets = [int(val) for val in f.readline().split(',')]
 
-    print(loss)
-    print(val_loss)
-    print(accs)
-    print(preds)
-    print(targets)
-
     return loss, val_loss, accs, preds, targets
 
 def main():
@@ -67,13 +61,11 @@ def main():
         print(f"{history_file} not found. ")
         return 1
 
-    #history = np.genfromtxt(history_file, delimiter=',')
     loss, val_loss, accs, preds, targets = load_history(history_file)
 
     plot_loss(loss, val_loss)
     plot_acc(accs)
 
-    print(len(np.where(np.array(preds) == np.array(targets))[0]))
     labels = [x for x in range(10)]
 
     plot_confusion_matrix_from_data(targets, preds, columns=labels)
