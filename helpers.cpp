@@ -22,9 +22,11 @@ void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::v
   print_digit(testData[testData.size()-1].value, testData[testData.size()-1].label);
 }
 
-void printConfusionMatrix(std::vector<int> &pred, std::vector<int> &target)
+void printConfusionMatrix(std::vector<unsigned short> &pred, std::vector<unsigned short> &target)
 {
     int conMatrix[NUM_LABELS][NUM_LABELS];
+    
+    printf("CONFUSION MATRIX:\n");
     if(pred.size() != target.size())
     {
         printf("Vector sizes do not match\n");

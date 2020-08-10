@@ -15,8 +15,8 @@
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
 #else
-  #define TRAIN_SIZE (100)
-  #define TEST_SIZE (10)
+  #define TRAIN_SIZE (1000)
+  #define TEST_SIZE (100)
 #endif // TESTING
 
 int main(int argc, char * argv[])
@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 85;
+  int numEpochs = 2;
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, testData, numEpochs);
 
@@ -75,12 +75,14 @@ int main(int argc, char * argv[])
   std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
   std::cout << "\nTotal training time: " <<  elapsedSeconds.count() << " seconds\n";
 
-//  // test model
-//  std::vector<unsigned short> preds;
-//  std::vector<unsigned short> targets;
-//  model.predict(testData, preds, targets);
-//
-//  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
+  // test model
+  std::vector<unsigned short> preds;
+  std::vector<unsigned short> targets;
+  model.predict(testData, preds, targets);
+
+  printConfusionMatrix(preds, targets);
+
+  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
 
   saveHistory(history, "model_history.csv");
 
