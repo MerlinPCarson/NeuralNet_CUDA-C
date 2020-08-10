@@ -22,14 +22,14 @@ __global__ void elementMultDevice(float *d_M, float *d_N, float *d_P, int num_MR
     }
 }
 
-__global__ void batchPredsDevice(float * out_activations, int * batch, int output_size, int batch_size)
+__global__ void batchPredsDevice(float * out_activations, unsigned short * batch, int output_size, int batch_size)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(row < batch_size && col == 0)
     {
-        int counter = 0;
+        unsigned short counter = 0;
         float maxValue = out_activations[row * output_size];
         for(int i = 1; i < output_size; ++i)
         {
@@ -126,7 +126,7 @@ __global__ void dotProductDevice(float *d_M, float *d_N, float *d_P, int num_MRo
 // numRows = batch size
 // d_sampleSquareErr: array to store the square error for each sample
 __global__ void mseDevice(
-    float *d_T,
+    unsigned short *d_T,
     float *d_O,
     float *d_sampleSquareErr,
     float *batchLoss,
@@ -135,35 +135,36 @@ __global__ void mseDevice(
     )
 {
     int batchId = blockIdx.x * blockDim.x + threadIdx.x;
-    int t_idx = d_T[batchId];
-
-    *batchLoss = 0;
     
-    // Sanity check
-    if (t_idx >= numLabels) {
-        printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
-        return;
-    }
-
-    if (batchId < batchSize) {
-
-        // Now go through each of the output values and calculate the MSE
-        float err = 0;
-        for (int j = 0; j < numLabels; j++) {
-            int o_idx = j + batchId * numLabels;
-
-            if (t_idx == j) {
-                // If this is the same as the expected output
-                float diff = 1 - d_O[o_idx];
-                err += diff * diff;
-            }
-            else {
-                float diff = d_O[o_idx];
-                err += diff * diff;
-            }
-        }
-        d_sampleSquareErr[batchId] = err;
-    }
+    if(batchId < batchSize){
+      int t_idx = d_T[batchId];
+      //printf("batch ID: %d, target: %f\n", batchId, d_T[batchId]);
+  
+      *batchLoss = 0;
+      
+      // Sanity check
+      if ((t_idx < 0) || (t_idx >= numLabels)) {
+          printf("t_idx (%d) >= numLabels (%d)\n", t_idx, numLabels);
+          return;
+      }
+  
+      // Now go through each of the output values and calculate the MSE
+      float err = 0;
+      for (int j = 0; j < numLabels; j++) {
+          int o_idx = j + batchId * numLabels;
+  
+          if (t_idx == j) {
+              // If this is the same as the expected output
+              float diff = 1 - d_O[o_idx];
+              err += diff * diff;
+          }
+          else {
+              float diff = d_O[o_idx];
+              err += diff * diff;
+          }
+      }
+      d_sampleSquareErr[batchId] = err;
+    } 
 
     __syncthreads();
 
@@ -185,14 +186,15 @@ __global__ void mseDevice(
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
-float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
+float MSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels)
 {
     float h_batchLoss = 0;
-    float *d_T, *d_O, *d_sampleSquareErr, *d_batchLoss;
+    unsigned short *d_T;
+    float *d_O, *d_sampleSquareErr, *d_batchLoss;
     cudaError_t cudaStatus;
 
     // Allocate memory for device variables
-    cudaStatus = cudaMalloc((void**)&d_T, batchSize * sizeof(float));
+    cudaStatus = cudaMalloc((void**)&d_T, batchSize * sizeof(unsigned short));
     cudaCheckError(cudaStatus);
 
     cudaStatus = cudaMalloc((void**)&d_O, batchSize * numLabels * sizeof(float));
@@ -205,7 +207,7 @@ float MSE(float *h_T, float *h_O, int batchSize, int numLabels)
     cudaCheckError(cudaStatus);
     
     // Copy data to GPU
-    cudaStatus = cudaMemcpy(d_T, h_T, batchSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(d_T, h_T, batchSize * sizeof(unsigned short), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
     cudaStatus = cudaMemcpy(d_O, h_O, batchSize * numLabels * sizeof(float), cudaMemcpyHostToDevice);
@@ -391,24 +393,24 @@ void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols)
     cudaFree(d_N);
 }
 
-void batchPreds(float * h_activations, int * h_batchPreds, int activation_size, int b_size)
+void batchPreds(float * h_activations, unsigned short * h_batchPreds, int activation_size, int b_size)
 {
     float *d_activations;
-    int *d_batchPreds;
+    unsigned short *d_batchPreds;
     cudaError_t cudaStatus;
 
     // Allocate memory for device variables
     cudaStatus = cudaMalloc((void**)&d_activations, activation_size* b_size* sizeof(float));
     cudaCheckError(cudaStatus);
 
-    cudaStatus = cudaMalloc((void**)&d_batchPreds, activation_size * sizeof(int));
+    cudaStatus = cudaMalloc((void**)&d_batchPreds, activation_size * sizeof(unsigned short));
     cudaCheckError(cudaStatus);
 
     // Copy data to GPU
     cudaStatus = cudaMemcpy(d_activations, h_activations, activation_size * b_size * sizeof(float), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
-    cudaStatus = cudaMemcpy(d_batchPreds, h_batchPreds, activation_size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMemcpy(d_batchPreds, h_batchPreds, activation_size * sizeof(unsigned short), cudaMemcpyHostToDevice);
     cudaCheckError(cudaStatus);
 
     dim3 gridDim((int)ceil((float)activation_size / BLOCK_WIDTH), (int)ceil((float) b_size / BLOCK_WIDTH), 1);
@@ -417,7 +419,7 @@ void batchPreds(float * h_activations, int * h_batchPreds, int activation_size, 
     batchPredsDevice<<<gridDim, blockDim>>>(d_activations, d_batchPreds, activation_size, b_size);
 
     //copy back to host
-    cudaStatus = cudaMemcpy(h_batchPreds, d_batchPreds, activation_size * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaStatus = cudaMemcpy(h_batchPreds, d_batchPreds, activation_size * sizeof(unsigned short), cudaMemcpyDeviceToHost);
     cudaCheckError(cudaStatus);
 
     cudaFree(d_activations);
@@ -486,31 +488,30 @@ __global__ void scalarMultiplication(double scalar, double* M, int Rows, int Col
         M[r*Cols + c] *= scalar;
 }
 
-
-
-
-__global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols){
+__global__ void updateWeights(float eta, float alpha, float* d_dotP, int Rows, int Cols, float* d_w, float* d_delta_weights){
     /*
         w -- set of weights being updated
         error -- the error by which the weights need to be updated
         layer -- can be the output-to-hidden layer OR the hidden-to-input layer
         alpha -- momentum
     */
+
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        d_w[index] = eta * d_dotP[index] + alpha * d_w[index];
+        d_delta_weights[index] = eta * d_dotP[index]/BATCH_SIZE + alpha * d_delta_weights[index];
+        d_w[index] += d_delta_weights[index];
     }
 
 }
 
-__global__ void outputError(float* d_error, float* targets, float* out_layer, int Rows, int Cols){
+__global__ void outputError(float* d_error, unsigned short* t, float* d_out_layer, int Rows, int Cols){
     /*
         d_error   -- delta_k
         targets    -- one hot encode 1D array containing 0.9 for target label
-        out_layer -- the squashed activations for the output layer
+        d_out_layer -- the squashed activations for the output layer
         Rows      -- should be 1 as they are all 1D arrays
         Cols      -- should be the number of ouput nodes 
     */
@@ -519,28 +520,170 @@ __global__ void outputError(float* d_error, float* targets, float* out_layer, in
     
     if(r < Rows && c < Cols){ 
         int index = r*Cols + c;
-        // 1x10               1x10                    1x10               1x10              1x10
-        d_error[index] = out_layer[index] * (1 - out_layer[index]) * (targets[index] - out_layer[index]);
+        if(t[r] == c)
+            d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (1 - d_out_layer[index]);
+        else 
+            d_error[index] = d_out_layer[index] * (1 - d_out_layer[index]) * (0 - d_out_layer[index]);
     }
     
 }
 
 
-__global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols){
+__global__ void hiddenError(float* d_error, float* d_dotP, float* d_hidden_layer, int Rows, int Cols){
     /*
-    d_error       -- delta_j    
-    outputUnits   -- the output error dot output weights
-    hidden_layer  -- the hidden activations
-    Rows          -- should be 1 as they are all 1D arrays
-    Cols          -- should be the number of ouput nodes 
+    d_error         -- delta_j    
+    d_dotP          -- the output error dot output weights
+    d_hidden_layer  -- the hidden activations
+    Rows            -- should be 1 as they are all 1D arrays
+    Cols            -- should be the number of ouput nodes 
     */
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     int c = blockIdx.x * blockDim.x + threadIdx.x; 
     
     if(r < Rows && c < Cols){
         int index = r*Cols + c;
-        // 1x10               1x10                      1x10                     1x10
-        d_error[index] = hidden_layer[index] * (1 - hidden_layer[index]) * (outputUnits[index]);
+        d_error[index] = d_hidden_layer[index] * (1 - d_hidden_layer[index]) * (d_dotP[index]);
     }
 
+}
+
+
+
+
+void error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
+    
+    //--------------  DEEIVCE Prep ----------------------
+  float *d_z, *d_h, *d_k, *d_j;
+  unsigned short *d_t;
+  
+  cudaError_t cudaStatus;
+  cudaStatus = cudaMalloc((void**)&d_t, BATCH_SIZE * sizeof(unsigned short));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_t, t, BATCH_SIZE * sizeof(unsigned short), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
+  cudaStatus = cudaMalloc((void**)&d_z, BATCH_SIZE * NUM_LABELS * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_z, z, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
+  cudaStatus = cudaMalloc((void**)&d_h, BATCH_SIZE * HIDDEN_SIZE * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_h, h, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
+  cudaStatus = cudaMalloc((void**)&d_k, BATCH_SIZE * NUM_LABELS * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_k, delta_k, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+  
+  cudaStatus = cudaMalloc((void**)&d_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_j, delta_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+    
+  
+  // call kernel for weight update for each thread to update a weight
+  int blockX = ceil((float)BATCH_SIZE/BLOCK_WIDTH);
+  int blockY = ceil((float)NUM_LABELS/BLOCK_WIDTH);
+  int threadX = BLOCK_WIDTH;
+  int threadY = BLOCK_WIDTH;
+  dim3 dimGrid(blockX,   blockY,  1);
+  dim3 dimBlock(threadX, threadY, 1);
+  //--------------  END: DEEIVCE Prep  ----------------------
+
+  outputError<<<dimGrid, dimBlock>>>(d_k, d_t, d_z, BATCH_SIZE, NUM_LABELS); 
+  
+  // copy back to the host because we need delta K for the dotP
+  cudaStatus = cudaMemcpy(delta_k, d_k, BATCH_SIZE * NUM_LABELS * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+
+  float* errorTransposed;
+  errorTransposed = (float*)malloc(BATCH_SIZE*NUM_LABELS*sizeof(float));
+  transpose(delta_k, errorTransposed, BATCH_SIZE, NUM_LABELS);
+  
+  float *dotP, *d_dotP; 
+  dotP = (float*)malloc(HIDDEN_SIZE*BATCH_SIZE*sizeof(float));
+  dotProduct((float*)output_weights, errorTransposed, dotP, HIDDEN_SIZE, NUM_LABELS, NUM_LABELS, BATCH_SIZE);
+  
+  // Prep for hidden error
+  blockX = ceil((float)HIDDEN_SIZE/BLOCK_WIDTH);
+  blockY = ceil((float)BATCH_SIZE/BLOCK_WIDTH);
+  threadX = BLOCK_WIDTH;
+  threadY = BLOCK_WIDTH;
+  dim3 dimGrid2(blockX,   blockY,  1);
+  dim3 dimBlock2(threadX, threadY, 1);
+  
+  // used for the dot product of output error and output weights
+  cudaStatus = cudaMalloc((void**)&d_dotP, HIDDEN_SIZE * BATCH_SIZE * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_dotP, dotP, HIDDEN_SIZE * BATCH_SIZE * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+
+  hiddenError<<<dimGrid2, dimBlock2>>>(d_j, d_dotP, d_h, BATCH_SIZE, HIDDEN_SIZE );
+
+  // copy back to the host variables
+  cudaStatus = cudaMemcpy(delta_j, d_j, BATCH_SIZE * HIDDEN_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+  
+  // deallocate device memory
+  cudaFree(d_z);
+  cudaFree(d_h);
+  cudaFree(d_k);
+  cudaFree(d_j);
+  cudaFree(d_t);
+  cudaFree(d_dotP);
+  
+  free(errorTransposed);
+  free(dotP);
+}
+
+void update_weights(float eta, float alpha, float* weights, int wRows, int wCols, float* dotP, float * delta_weights){
+/*
+    dotP -- layer activations transposed x layer errors
+*/
+
+  //--------------  DEEIVCE Prep ----------------------
+  float *d_w,  *d_dotP, *d_delta_weights;
+
+  cudaError_t cudaStatus;    
+  cudaStatus = cudaMalloc((void**)&d_w, wRows * wCols * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_w, weights, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+
+  cudaStatus = cudaMalloc((void**)&d_dotP, wRows * wCols * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy( d_dotP,  dotP, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+
+  cudaStatus = cudaMalloc((void**)&d_delta_weights, wRows * wCols * sizeof(float));
+  cudaCheckError(cudaStatus);
+  cudaStatus = cudaMemcpy(d_delta_weights,  delta_weights, wRows * wCols * sizeof(float), cudaMemcpyHostToDevice);
+  cudaCheckError(cudaStatus);
+
+  // call kernel for weight update for each thread to update a weight
+  int blockX = ceil((float)wCols / BLOCK_WIDTH);
+  int blockY = ceil((float)wRows / BLOCK_WIDTH);
+  int threadX = BLOCK_WIDTH;
+  int threadY = BLOCK_WIDTH;
+  dim3 dimGrid(blockX,   blockY,  1);
+  dim3 dimBlock(threadX, threadY, 1);
+  //--------------  END: DEEIVCE Prep ----------------------
+
+  updateWeights<<<dimGrid, dimBlock>>>(eta, alpha, d_dotP, wRows, wCols, d_w, d_delta_weights);
+
+  
+  // copy back to the host variables
+  cudaStatus = cudaMemcpy(weights, d_w,  wRows * wCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+  
+  // copy back to the host variables
+  cudaStatus = cudaMemcpy(delta_weights, d_delta_weights,  wRows * wCols * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaCheckError(cudaStatus);
+  
+  // deallocate device memory
+  cudaFree(d_w);
+  cudaFree(d_dotP);
+  cudaFree(d_delta_weights);
 }

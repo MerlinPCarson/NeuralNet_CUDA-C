@@ -23,14 +23,14 @@
 
 // data structure for MNIST digits
 struct Data{
-	int label;
+	unsigned short label;
 	float value[NUM_FEATURES];             // number of pixels +1 for bias term
 };
 
 void load_csv(std::vector<Data> &data, std::string data_file, int size);
 void shuffle_idx(int * order, int dataSize);
 void train_test_split(std::vector<Data> &dataSet, std::vector<Data> &trainSet, std::vector<Data>  &testSet, float testRatio);
-void print_digit(float * digit, int label);
+void print_digit(float * digit, unsigned short label);
 
 
 #endif // DATA_H

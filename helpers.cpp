@@ -22,6 +22,38 @@ void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::v
   print_digit(testData[testData.size()-1].value, testData[testData.size()-1].label);
 }
 
+void printConfusionMatrix(std::vector<unsigned short> &pred, std::vector<unsigned short> &target)
+{
+    int conMatrix[NUM_LABELS][NUM_LABELS];
+    
+    printf("CONFUSION MATRIX:\n");
+    if(pred.size() != target.size())
+    {
+        printf("Vector sizes do not match\n");
+        exit(-1);
+    }
+
+    for(int i = 0; i < NUM_LABELS; i++) 
+    {
+        for(int j = 0; j < NUM_LABELS; j++)
+        {
+            conMatrix[i][j] = 0;
+        }
+    }
+
+    for (auto it1 = pred.begin(), it2 = target.begin(); it1 != pred.end() && it2 != target.end(); it1++, it2++) {
+        ++conMatrix[*it1][*it2];
+    }
+
+    for (int i = 0; i < NUM_LABELS; i++) {
+        for (int j = 0; j < NUM_LABELS; j++) {
+            printf("%d ", conMatrix[i][j]);
+        }
+        printf("\n");
+    }
+
+}
+
 void printMatrix(float *X, int numRows, int numCols)
 {
     for (int i = 0; i < numRows; i++) {
@@ -33,13 +65,13 @@ void printMatrix(float *X, int numRows, int numCols)
     }
 }
 
-void hostBatchPreds(float *output_activations, int *batch_pred, int output_size, int b_size)
+void hostBatchPreds(float *output_activations, unsigned short *batch_pred, int output_size, int b_size)
 {
     for(int i = 0; i < b_size; ++i)
     {
-        int counter = 0;
+        unsigned short counter = 0;
         float maxValue = output_activations[i*output_size];
-        for(int j = 1; j < output_size; ++j)
+        for(unsigned short j = 1; j < output_size; ++j)
         {
             int idx = j + i*output_size;
             if(output_activations[idx] > maxValue)
@@ -50,6 +82,16 @@ void hostBatchPreds(float *output_activations, int *batch_pred, int output_size,
         }
         batch_pred[i] = counter;
     }
+}
+
+template<class T>
+void saveDataToFile(std::ofstream &file, std::vector<T> &data){
+    file << data[0];
+    for(int i = 1; i < data.size(); ++i){
+      file << ',';
+      file << data[i];
+    }
+    file << std::endl;
 }
 
 void saveHistory(History history, const char* fileName){
@@ -64,20 +106,30 @@ void saveHistory(History history, const char* fileName){
   std::ofstream file(fileName);
 
   // write comma seprated training losses to file with newline at end
-  file << history.loss[0];
-  for(int i = 1; i < history.loss.size(); ++i){
-    file << ',';
-    file << history.loss[i];
+  if(history.loss.size() > 0){
+    saveDataToFile<float>(file, history.loss);
   }
-  file << std::endl;
 
   // write comma seprated validation losses to file with newline at end
-  file << history.valLoss[0];
-  for(int i = 1; i < history.valLoss.size(); ++i){
-    file << ',';
-    file << history.valLoss[i];
+  if(history.valLoss.size() > 0){
+    saveDataToFile<float>(file, history.valLoss);
   }
-  file << std::endl;
+
+  // write comma seprated test accuracies to file with newline at end
+  if(history.testAcc.size() > 0){
+    saveDataToFile<float>(file, history.testAcc);
+  }
+
+  // write comma seprated predictions on test set for best accuracy 
+  if(history.bestPreds.size() > 0){
+    saveDataToFile<unsigned short>(file, history.bestPreds);
+  }
+
+
+  // write comma seprated test set target values
+  if(history.bestTargets.size() > 0){
+    saveDataToFile<unsigned short>(file, history.bestTargets);
+  }
 
   // close file
   file.close();
@@ -86,13 +138,14 @@ void saveHistory(History history, const char* fileName){
 
 // h_T is 1D (batchSize), h_O is 2D (batchSize, numLabels)
 // numRows = batch size
-float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
+float hostMSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels)
 {
     float batchLoss = 0.0;
 
     // Update the error table
     for (int i = 0; i < batchSize; i++) {
-        int t_idx = h_T[i];
+        unsigned short t_idx = h_T[i];
+     //   printf("target: %f\n", h_T[i]);
     
         // Sanity check
         if (t_idx >= numLabels) {
@@ -116,10 +169,12 @@ float hostMSE(float *h_T, float *h_O, int batchSize, int numLabels)
             }
         }
 
+    //    printf("err: %f\n", err);
         err /= 2;
         batchLoss += err;
     }
 
+    //printf("batch err: %f\n", batchLoss/batchSize);
     return batchLoss / (float)batchSize;
 }
 
@@ -201,9 +256,11 @@ void hostDotProduct(float *h_M, float *h_N, float *h_P, int num_MRows, int num_M
             for (i = 0, j = 0; i < num_NRows && j < num_MCols; i++, j++) {
                 int m_idx = j + row * num_MCols;
                 int n_idx = col + i * num_NCols;
+     //           printf("%f * %f + ", h_M[m_idx], h_N[n_idx]);
                 pVal += h_M[m_idx] * h_N[n_idx];
             }
             h_P[p_idx] = pVal;
+    //        printf("\n%f\n\n", pVal);
         }
     }
 }

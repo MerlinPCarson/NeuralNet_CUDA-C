@@ -21,17 +21,18 @@ do {												\
 // various helper functions
 void printMatrix(float *X, int numRows, int numCols);
 void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
+void printConfusionMatrix(std::vector<unsigned short> &pred, std::vector<unsigned short> &target);
 void saveHistory(History history, const char* fileName);
+void saveDataToFile(std::ofstream &file, std::vector<float> &data);
 int cudaDeviceProperties();
 
-void hostBatchPreds(float* output_activations, int * batch_pred, int output_size, int b_size);
+void hostBatchPreds(float* output_activations, unsigned short * batch_pred, int output_size, int b_size);
 void hostElementMult(float *h_M, float *h_N, float *h_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 void hostDotProduct(float* M, float* N, float* P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
-void hostTranspose(float* A, int rows, int cols, float* &B);
 void hostActivationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
 void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int numRows, int numCols);
 void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols);
-float hostMSE(float* h_T, float* h_O, int batchSize, int numLabels);
+float hostMSE(unsigned short* h_T, float* h_O, int batchSize, int numLabels);
 
 
 #endif // HELPERS_H

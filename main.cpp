@@ -10,20 +10,21 @@
 
 
 // If TESTING macro is uncommented, load a subset of dataset 
-#define TESTING
+//#define TESTING
 #ifndef TESTING
   #define TRAIN_SIZE (NUM_TRAIN)
   #define TEST_SIZE (NUM_TEST)
 #else
-  #define TRAIN_SIZE (100)
-  #define TEST_SIZE (10)
+  #define TRAIN_SIZE (1000)
+  #define TEST_SIZE (100)
 #endif // TESTING
 
 int main(int argc, char * argv[])
 {
 
   // set random seed
-  srand(time(NULL));
+  //srand(time(NULL));
+  srand(42);
 
   // number of examples to load from each dataset
   int trainSize = TRAIN_SIZE;
@@ -58,7 +59,9 @@ int main(int argc, char * argv[])
 #endif // TESTING
 
   // instantiate neural network with learning rate
-  NeuralNet model = NeuralNet(0.01);
+  float learning_rate = 0.1;
+  float alpha = 0.9;  // for momentum
+  NeuralNet model = NeuralNet(learning_rate, alpha);
 
   // time program started 
   auto start = std::chrono::steady_clock::now();
@@ -66,18 +69,20 @@ int main(int argc, char * argv[])
   // main training loop
   int numEpochs = 2;
   std::cout << "\nBeginning Training\n";
-  History history = model.fit(trainSet, valSet, numEpochs);
+  History history = model.fit(trainSet, valSet, testData, numEpochs);
+
+  // total time to run training 
+  std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
+  std::cout << "\nTotal training time: " <<  elapsedSeconds.count() << " seconds\n";
 
   // test model
-  std::vector<int> preds;
-  std::vector<int> targets;
+  std::vector<unsigned short> preds;
+  std::vector<unsigned short> targets;
   model.predict(testData, preds, targets);
 
-  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
+  printConfusionMatrix(preds, targets);
 
-  // total time to run program 
-  std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
-  std::cout << "\nExecution time: " <<  elapsedSeconds.count() << " seconds\n";
+  std::cout << "Model Accuracy = " << model.accuracy(preds, targets) << std::endl;
 
   saveHistory(history, "model_history.csv");
 

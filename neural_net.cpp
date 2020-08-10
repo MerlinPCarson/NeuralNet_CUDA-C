@@ -2,21 +2,29 @@
 #include <math.h>
 #include <random>
 #include <time.h>
+#include <chrono>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
+#include <string.h>
+
 #include "neural_net.h"
 #include "kernels.h"
 #include "helpers.h"
 
-
-#define DEBUG
+//#define DEBUG 
+//#define SHOW_PREDS 
+//#define SHOW_BATCH
+#define TEST_MODEL
 #define USE_GPU
 
 NeuralNet::NeuralNet(){
-
+  eta = alpha = 0;
 }
 
-NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
+NeuralNet::NeuralNet(float learning_rate, float alpha): eta(learning_rate), alpha(alpha){
+
+  printf("\nInitializing model with %d neurons in the hidden layer, ", HIDDEN_SIZE);
+  printf("learning rate of %.4f, and momentum of %.4f\n", eta, alpha);
 
   // initialize all layer weights
   init_weights();
@@ -32,7 +40,8 @@ NeuralNet::NeuralNet(float learning_rate): eta(learning_rate){
 void NeuralNet::init_weights(){
 
   std::default_random_engine generator;
-  generator.seed(time(NULL));
+  //generator.seed(time(NULL));
+  generator.seed(42);
 
   // init hidden layer weights
   double limit = sqrt(6.0 / (NUM_FEATURES + HIDDEN_SIZE));
@@ -43,11 +52,6 @@ void NeuralNet::init_weights(){
     }
   }
 
-  // init bias weight to 0 for each neuron in hidden layer
-//  for(int i = 0; i < HIDDEN_SIZE; ++i){
-//      hidden_weights[NUM_FEATURES][i] = 0;
-//  }
-
   // init output layer weights
   limit = sqrt(6.0 / (HIDDEN_SIZE + NUM_LABELS));
   std::uniform_real_distribution<double> dist_output(-limit, limit);
@@ -57,19 +61,26 @@ void NeuralNet::init_weights(){
       output_weights[i][j] = dist_output(generator);
     }
   }
-  
-  // init bias weight to 0 for each neuron in output layer
-//  for(int i = 0; i < NUM_LABELS; ++i){
-//      output_weights[HIDDEN_SIZE][i] = 0.0;
-//  }
 
+  // initialize delta weights to 0.0
+  memset(delta_hidden_weights, 0.0, NUM_FEATURES * HIDDEN_SIZE * sizeof(float));
+  memset(delta_output_weights, 0.0, HIDDEN_SIZE * NUM_LABELS * sizeof(float));
 }
 
 // training function
-History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, int num_epochs){
+History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testSet, int num_epochs){
+
+  // time at start epoch
+  auto start = std::chrono::steady_clock::now();
 
   int * order = new int[trainSet.size()];
   int * valOrder = new int[valSet.size()];
+
+  // for testing model
+  std::vector<unsigned short> preds;
+  std::vector<unsigned short> targets;
+  float testAccuracy = 0.0;
+  float bestAcc = 0.0;
 
   // validation order is shuffled
   for(int i = 0; i < valSet.size(); ++i){
@@ -77,10 +88,17 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   }
 
   float batch[BATCH_SIZE][NUM_FEATURES];
-  float target[BATCH_SIZE];
+  unsigned short target[BATCH_SIZE];
 
   int numTrainBatches = floor(trainSet.size()/BATCH_SIZE);
   int numValBatches = floor(valSet.size()/BATCH_SIZE);
+
+  // progress bar vars
+  int numBarSegments = 80;
+  int batchesPerBarUpdate = numTrainBatches/numBarSegments;
+  if(batchesPerBarUpdate == 0){
+    batchesPerBarUpdate = 1;
+  }
 
   // losses
   float loss = 0.0;
@@ -91,16 +109,30 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
 
   // main training loop
   for(int i = 0; i < num_epochs; ++i){
-    std::cout << "\nEpoch: " << i + 1 << '/' << num_epochs << std::endl << std::endl;
+    std::cout << "\nEpoch: " << i + 1 << '/' << num_epochs << std::endl;
+
+    // time at start epoch
+    start = std::chrono::steady_clock::now();
 
     // train
     for(int j = 0; j < numTrainBatches; ++j){
-  
+
+      // update status bar
+      if((j % batchesPerBarUpdate) == 0){
+        std::cout << "#" << std::flush; 
+      }
+
       // shuffle order of data
       shuffle_idx(order, trainSet.size());
   
       // load batch of data from training set using shuffled order
       make_batch(batch, target, trainSet, order, j);
+
+#ifdef SHOW_BATCH 
+      for(int k = 0; k < BATCH_SIZE; ++k){
+          print_digit(batch[k], target[k]);
+      }
+#endif // SHOW_BATCH
 
       // forward pass
       forward(batch);
@@ -113,7 +145,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
 #endif // USE_GPU
       
       // backward pass
-      // backward(batch, target, output);
+      backward(batch, target); // target just has 2 labelsa
       
     }
 
@@ -139,6 +171,26 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
     loss /= numTrainBatches;
     valLoss /= numValBatches;
 
+    // total epoch time 
+    std::chrono::duration<double> elapsedSeconds = std::chrono::steady_clock::now() - start;
+    std::cout << " [epoch time: " <<  elapsedSeconds.count() << " seconds]\n";
+
+#ifdef TEST_MODEL
+    // test model and save accuray to history
+    predict(testSet, preds, targets);
+    testAccuracy = accuracy(preds, targets);
+    history.testAcc.push_back(testAccuracy);
+    printf("test set accuracy: %.4f, ", testAccuracy);
+
+    // save best predictions to history
+    if (testAccuracy > bestAcc){
+      bestAcc = testAccuracy;
+      history.bestPreds = preds;
+      history.bestTargets = targets;
+    }
+#endif // TEST_MODEL
+
+    // show epoch losses
     std::cout << "loss: " << loss << ", validation loss: " << valLoss << std::endl;
 
     // add epoch losses to history
@@ -154,7 +206,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, i
   return history;
 }
 
-void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, std::vector<int> &targets){
+void NeuralNet::predict(std::vector<Data> &testData, std::vector<unsigned short> &preds, std::vector<unsigned short> &targets){
 
   int * testOrder = new int[testData.size()];
 
@@ -163,16 +215,19 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
     testOrder[i] = i;
   }
 
+  // make sure vectors are empty 
+  preds.clear();
+  targets.clear();
+
   float batch[BATCH_SIZE][NUM_FEATURES];
-  float target[BATCH_SIZE];
-  int batch_pred[BATCH_SIZE];
+  unsigned short target[BATCH_SIZE];
+  unsigned short batch_pred[BATCH_SIZE];
 
   int numTestBatches = floor(testData.size()/BATCH_SIZE);
 
   for(int i = 0; i < numTestBatches; ++i){
     // load batch of data from validation set 
     make_batch(batch, target, testData, testOrder, i);
-
 
     // forward pass
     forward(batch);
@@ -184,24 +239,30 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<int> &preds, st
     hostBatchPreds((float*)output_activation, batch_pred, NUM_LABELS, BATCH_SIZE);
 #endif // USE_GPU
 
+#ifdef SHOW_PREDS 
+    printf("Printing output activations:\n");
+    printMatrix((float*)output_activation, BATCH_SIZE, NUM_LABELS);
+    printf("\n");
+#endif // SHOW_PREDS
+
     // add predictions and targets to output vectors
-      for(int j = 0; j < BATCH_SIZE; ++j){
-        preds.push_back(batch_pred[j]);
-        targets.push_back((int)target[j]);
+    for(int j = 0; j < BATCH_SIZE; ++j){
+      preds.push_back(batch_pred[j]);
+      targets.push_back(target[j]);
 
-#ifdef DEBUG
-        print_digit(batch[j], target[j]);
-        printf("prediction: %d \n", batch_pred[j]);
-#endif // DEBUG
+#ifdef SHOW_PREDS 
+      print_digit(batch[j], target[j]);
+      printf("prediction: %d \n", batch_pred[j]);
+#endif // SHOW_PREDS 
 
-      }
+    }
 
   }
 
 }
 
 // Calculates accuracy of the passed in set.
-float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
+float NeuralNet::accuracy(std::vector<unsigned short> &pred, std::vector<unsigned short> &targets)
 {
     float acc = 0;
     
@@ -217,8 +278,9 @@ float NeuralNet::accuracy(std::vector<int> &pred, std::vector<int> &targets)
     return acc / pred.size();
 }
 
+
 // load batch of data from a dataset from a shuffled dataset
-void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vector<Data> &dataSet, int * order, int batchNum){
+void NeuralNet::make_batch(float batch[][NUM_FEATURES], unsigned short * target, std::vector<Data> &dataSet, int * order, int batchNum){
 
   // starting position in training set order for current batch
   int startIdx = batchNum * BATCH_SIZE;
@@ -236,6 +298,10 @@ void NeuralNet::make_batch(float batch[][NUM_FEATURES], float * target, std::vec
 
 // forward propagation of a batch of examples
 void NeuralNet::forward(float batch[][NUM_FEATURES]){
+
+#ifdef DEBUG
+  show_weights();
+#endif // DEBUG
 
 #ifdef USE_GPU
     dotProduct((float*)batch, (float*)hidden_weights, (float*)hidden_signal, BATCH_SIZE, NUM_FEATURES, NUM_FEATURES, HIDDEN_SIZE);
@@ -278,185 +344,61 @@ void NeuralNet::show_weights(){
   }
 }
 
-void NeuralNet::error_function(int t, float* z, float* h, float* &delta_k, float* &delta_j){
-  /* t       -- target label 
-      z       -- output activations
-      h       -- hidden actications
-      delta_k -- output error 
-      delta_j -- hidden error
-  */
-  
-  //--------------  DEEIVCE Prep ----------------------
-  float *d_z, *d_h, *d_k, *d_j, *d_target;
-  float *outputUnits; 
-  int outRows    = 1,  outCols    = NUM_LABELS;
-  int hiddenRows = 1,  hiddenCols = HIDDEN_SIZE;
-
-
-  // one hot probabilistic  matrix
-  float targets[NUM_LABELS];
-  for(int i = 0; i < NUM_LABELS; ++i)
-    targets[i] = (t==i) ? 0.9 : 0.1;
-  
-  cudaError_t cudaStatus;
-  cudaStatus = cudaMalloc((void**)&d_z, outRows * outCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_z, z, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&d_h, hiddenRows * hiddenCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_h, h, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-
-  cudaStatus = cudaMalloc((void**)&d_k, outRows * outCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_k, delta_k, outRows * outCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&d_j, hiddenRows * hiddenCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_j, delta_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&d_target,  NUM_LABELS * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_target, targets,  NUM_LABELS * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&outputUnits, outRows * hiddenCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-
-
-  // call kernel for weight update for each thread to update a weight
-  int blockX = ceil(outRows/2);
-  int blockY = ceil(outCols/2);
-  int threadX = BLOCK_WIDTH;
-  int threadY = BLOCK_WIDTH;
-  dim3 dimGrid(blockX,   blockY,  1);
-  dim3 dimBlock(threadX, threadY, 1);
-  //--------------  END: DEEIVCE Prep ----------------------
-
-  
-  outputError<<<dimGrid, dimBlock>>>(delta_k, targets, z, outRows, outCols); 
-  int dleta_kRows = outRows;
-  int dleta_kCols = outCols;
-  
-  
-  // Prep for hidden error
-  blockX = ceil(hiddenCols/2);
-  blockY = ceil(hiddenRows/2);
-  threadX = BLOCK_WIDTH;
-  threadY = BLOCK_WIDTH;
-  dim3 dimGrid2(blockX,   blockY,  1);
-  dim3 dimBlock2(threadX, threadY, 1);
-  
-  // output error dot output weights = outputUnits
-  //    1x10 @ 10x10  = 1x10
-  dotProduct(delta_k, *output_weights, outputUnits, dleta_kRows, dleta_kCols, HIDDEN_SIZE, NUM_LABELS);
-  hiddenError <<< dimGrid2, dimBlock2 >>>(delta_j, outputUnits, h, hiddenRows, hiddenCols );
-
-  // copy back to the host variables
-  cudaStatus = cudaMemcpy(delta_j, d_j, hiddenRows * hiddenCols * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(delta_k, d_k, outRows * outCols * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaCheckError(cudaStatus);
-
-  // deallocate device memory
-  cudaFree(d_z);
-  cudaFree(d_h);
-  cudaFree(d_k);
-  cudaFree(d_j);
-  cudaFree(d_target);
-  cudaFree(outputUnits);
+void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * target){
+    // calculate output and hidden layer errors
+    error_function(target, (float*)output_activation, 
+                           (float*)hidden_activation, 
+                           (float*)output_weights, 
+                           (float*)output_error, 
+                           (float*)hidden_error
+                  );
+    update_hidden_weights(); 
+    update_input_weights(train_batch); 
 }
 
-void NeuralNet::update_weights(float* error, float* layer, bool input){
+void NeuralNet::update_hidden_weights(){
   /*
   * error -- the error to update the weights
-  * layer -- can be the output-to-hidden layer OR the hidden-to-input layer
-  * input -- determines which error and layer is used to update the weights
+  * error -- the output error to update the output-to-hidden weights
+  * layer -- the output-to-hidden layer
   */
   
-  float *curr_error, *w;
-  int weightRows, weightCols, layerRows, layerCols, error_size;
-  if(input){
-    w = *this->hidden_weights;      // 784x10
-    curr_error = this->hidden_error;    // 1x10 (HIDDEN SIZE)
-    error_size = HIDDEN_SIZE;
-    weightRows = NUM_FEATURES;    // 784
-    weightCols = HIDDEN_SIZE;     // 10
-    layerRows = 1;                // FIXME
-    layerCols = HIDDEN_SIZE;      // TODO double check layer dimensions
-  }else{
-    w = *this->output_weights;      // 10x10
-    curr_error = this->output_error;    // 1x10  (OUTPUT LABELS)
-    error_size = NUM_LABELS;      // 10
-    weightRows = HIDDEN_SIZE;     // 10
-    weightCols = NUM_LABELS;       // 10
-    layerRows = 1;                // FIXME
-    layerCols = NUM_FEATURES;     // TODO double check layer dimensions
-  }
+  float* hiddenActsT;
+  hiddenActsT = (float*)malloc(HIDDEN_SIZE * BATCH_SIZE * sizeof(float));
+  hostTranspose((float*)hidden_activation, hiddenActsT, BATCH_SIZE, HIDDEN_SIZE);
 
-  float errorTransposed[HIDDEN_SIZE];
-  hostTranspose(curr_error, errorTransposed, 1, error_size);
+  float* dotP;
+  dotP = (float*)malloc(HIDDEN_SIZE*NUM_LABELS*sizeof(float));
 
+  // layer inputs x layer errors
+  dotProduct(hiddenActsT, (float*)output_error, dotP, HIDDEN_SIZE, BATCH_SIZE, BATCH_SIZE, NUM_LABELS);
 
-  //--------------  DEEIVCE Prep ----------------------
-  float *d_w, *d_error, *d_layer, *d_dotP;
-
-  cudaError_t cudaStatus;    
-  cudaStatus = cudaMalloc((void**)&d_w, weightRows * weightCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_w, w, weightRows * weightCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&d_layer, layerRows * layerCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_layer, layer, layerRows * layerCols * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-
-  cudaStatus = cudaMalloc((void**)&d_error, error_size * sizeof(float));
-  cudaCheckError(cudaStatus);
-  cudaStatus = cudaMemcpy(d_error, errorTransposed, error_size * sizeof(float), cudaMemcpyHostToDevice);
-  cudaCheckError(cudaStatus);
-
-  cudaStatus = cudaMalloc((void**)&d_dotP, error_size * layerCols * sizeof(float));
-  cudaCheckError(cudaStatus);
-
-
-  // call kernel for weight update for each thread to update a weight
-  int blockX = ceil(weightCols/2);
-  int blockY = ceil(weightRows/2);
-  int threadX = BLOCK_WIDTH;
-  int threadY = BLOCK_WIDTH;
-  dim3 dimGrid(blockX,   blockY,  1);
-  dim3 dimBlock(threadX, threadY, 1);
-  //--------------  END: DEEIVCE Prep ----------------------
-
+  update_weights(eta, alpha, (float*)output_weights, HIDDEN_SIZE, NUM_LABELS, dotP, (float*)delta_output_weights);
   
-  // d_dotP's dimeninsions will be     layerCols x error_size
-  dotProduct(d_layer, d_error, d_dotP, layerRows, layerCols, 1, error_size);
-                          
-                          // output-hidden    (1x10) hidden activations  DOT  error(1x10)
-                          // hidden-input     (1x785) inputs  DOT  error(1x10) 
-  updateWeights <<< dimGrid, dimBlock >>>(d_w, eta, d_dotP, alpha, layerCols, error_size );
+  free(hiddenActsT);
+  free(dotP);
+}
 
-  
-    // copy back to the host variables
-  cudaStatus = cudaMemcpy(w, d_w,  weightRows * weightCols * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaCheckError(cudaStatus);
-  
-  
-    
-    // deallocate device memory
-  cudaFree(d_w);
-  cudaFree(d_error);
-  cudaFree(d_layer);
-  cudaFree(d_dotP);
+void NeuralNet::update_input_weights(float batch[BATCH_SIZE][NUM_FEATURES]){
+  /*
+  * error -- the hidden error to update the hidden-to-input  weights
+  * layer -- the hidden-to-input layer
+  */
 
+  float* batchT;
+  batchT = (float*)malloc(NUM_FEATURES * BATCH_SIZE * sizeof(float));
+  hostTranspose((float*)batch, batchT, NUM_FEATURES, BATCH_SIZE);
+
+  float* dotP;
+  // layer inputs x layer errors
+  dotP = (float*)malloc(NUM_FEATURES*HIDDEN_SIZE*sizeof(float));
+  dotProduct(batchT, (float*)hidden_error, dotP, NUM_FEATURES, BATCH_SIZE, BATCH_SIZE, HIDDEN_SIZE);
+
+  //update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols );
+  update_weights(eta, alpha, (float*)hidden_weights, NUM_FEATURES, HIDDEN_SIZE, dotP, (float*)delta_hidden_weights);
+
+  free(batchT);
+  free(dotP);
 }
 
 

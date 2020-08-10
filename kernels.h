@@ -11,12 +11,11 @@ void activationFuncForward(float *h_Z, float *h_Y, int numRows, int numCols);
 void dotProduct(float* d_M, float* d_N, float* d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 void elementMult(float *d_M, float *d_N, float *d_P, int num_MRows, int num_MCols, int num_NRows, int num_NCols);
 void transpose(float *h_M, float *h_N, int num_MRows, int num_MCols);
-float MSE(float *h_T, float *h_O, int batchSize, int numLabels);
-void batchPreds(float * h_activations, int * h_backPreds, int activation_size, int b_size);
+float MSE(unsigned short *h_T, float *h_O, int batchSize, int numLabels);
+void batchPreds(float * h_activations, unsigned short * h_backPreds, int activation_size, int b_size);
 
 // Backprop
-__global__ void updateWeights(float* d_w, float eta, float* d_dotP, float alpha, int Rows, int Cols);
-__global__ void outputError(float* d_error, float* target, float* out_layer, int Rows, int Cols);
-__global__ void hiddenError(float* d_error, float* outputUnits, float* hidden_layer, int Rows, int Cols);
+void error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j);
+void update_weights(float eta, float alpha, float* hidden_weights, int wRows, int wCols, float* dotP, float * delta_weights);
 
 #endif // KERNELS_H
