@@ -52,6 +52,16 @@ void hostBatchPreds(float *output_activations, unsigned short *batch_pred, int o
     }
 }
 
+template<class T>
+void saveDataToFile(std::ofstream &file, std::vector<T> &data){
+    file << data[0];
+    for(int i = 1; i < data.size(); ++i){
+      file << ',';
+      file << data[i];
+    }
+    file << std::endl;
+}
+
 void saveHistory(History history, const char* fileName){
 
   // verify there is anything to write to file
@@ -64,28 +74,30 @@ void saveHistory(History history, const char* fileName){
   std::ofstream file(fileName);
 
   // write comma seprated training losses to file with newline at end
-  file << history.loss[0];
-  for(int i = 1; i < history.loss.size(); ++i){
-    file << ',';
-    file << history.loss[i];
+  if(history.loss.size() > 0){
+    saveDataToFile<float>(file, history.loss);
   }
-  file << std::endl;
 
   // write comma seprated validation losses to file with newline at end
-  file << history.valLoss[0];
-  for(int i = 1; i < history.valLoss.size(); ++i){
-    file << ',';
-    file << history.valLoss[i];
+  if(history.valLoss.size() > 0){
+    saveDataToFile<float>(file, history.valLoss);
   }
-  file << std::endl;
 
   // write comma seprated test accuracies to file with newline at end
-  file << history.testAcc[0];
-  for(int i = 1; i < history.testAcc.size(); ++i){
-    file << ',';
-    file << history.testAcc[i];
+  if(history.testAcc.size() > 0){
+    saveDataToFile<float>(file, history.testAcc);
   }
-  file << std::endl;
+
+  // write comma seprated predictions on test set for best accuracy 
+  if(history.bestPreds.size() > 0){
+    saveDataToFile<unsigned short>(file, history.bestPreds);
+  }
+
+
+  // write comma seprated test set target values
+  if(history.bestTargets.size() > 0){
+    saveDataToFile<unsigned short>(file, history.bestTargets);
+  }
 
   // close file
   file.close();

@@ -5,10 +5,11 @@
 #include <chrono>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
+#include <string.h>
+
 #include "neural_net.h"
 #include "kernels.h"
 #include "helpers.h"
-#include <string.h>
 
 //#define DEBUG 
 //#define SHOW_PREDS 
@@ -21,6 +22,10 @@ NeuralNet::NeuralNet(){
 }
 
 NeuralNet::NeuralNet(float learning_rate, float alpha): eta(learning_rate), alpha(alpha){
+
+  printf("\nInitializing model with %d neurons in the hidden layer, ", HIDDEN_SIZE);
+  printf("learning rate of %.4f, and momentum of %.4f\n", eta, alpha);
+
   // initialize all layer weights
   init_weights();
 
@@ -47,11 +52,6 @@ void NeuralNet::init_weights(){
     }
   }
 
-  // init bias weight to 0 for each neuron in hidden layer
-//  for(int i = 0; i < HIDDEN_SIZE; ++i){
-//      hidden_weights[NUM_FEATURES][i] = 0;
-//  }
-
   // init output layer weights
   limit = sqrt(6.0 / (HIDDEN_SIZE + NUM_LABELS));
   std::uniform_real_distribution<double> dist_output(-limit, limit);
@@ -61,11 +61,6 @@ void NeuralNet::init_weights(){
       output_weights[i][j] = dist_output(generator);
     }
   }
-  
-  // init bias weight to 0 for each neuron in output layer
-//  for(int i = 0; i < NUM_LABELS; ++i){
-//      output_weights[HIDDEN_SIZE][i] = 0.0;
-//  }
 
   // initialize delta weights to 0.0
   memset(delta_hidden_weights, 0.0, NUM_FEATURES * HIDDEN_SIZE * sizeof(float));
@@ -85,6 +80,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, s
   std::vector<unsigned short> preds;
   std::vector<unsigned short> targets;
   float testAccuracy = 0.0;
+  float bestAcc = 0.0;
 
   // validation order is shuffled
   for(int i = 0; i < valSet.size(); ++i){
@@ -120,9 +116,7 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, s
 
     // train
     for(int j = 0; j < numTrainBatches; ++j){
-    //  if(j == 2) break;
 
-      //printf("Batch %d\n", j);
       // update status bar
       if((j % batchesPerBarUpdate) == 0){
         std::cout << "#" << std::flush; 
@@ -182,10 +176,18 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, s
     std::cout << " [epoch time: " <<  elapsedSeconds.count() << " seconds]\n";
 
 #ifdef TEST_MODEL
-    // test model
+    // test model and save accuray to history
     predict(testSet, preds, targets);
     testAccuracy = accuracy(preds, targets);
+    history.testAcc.push_back(testAccuracy);
     printf("test set accuracy: %.4f, ", testAccuracy);
+
+    // save best predictions to history
+    if (testAccuracy > bestAcc){
+      bestAcc = testAccuracy;
+      history.bestPreds = preds;
+      history.bestTargets = targets;
+    }
 #endif // TEST_MODEL
 
     // show epoch losses
@@ -194,7 +196,6 @@ History NeuralNet::fit(std::vector<Data> &trainSet, std::vector<Data> &valSet, s
     // add epoch losses to history
     history.loss.push_back(loss);
     history.valLoss.push_back(valLoss);
-    history.testAcc.push_back(testAccuracy);
 
     // reset losses for next epoch
     loss = 0.0;
@@ -213,6 +214,10 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<unsigned short>
   for(int i = 0; i < testData.size(); ++i){
     testOrder[i] = i;
   }
+
+  // make sure vectors are empty 
+  preds.clear();
+  targets.clear();
 
   float batch[BATCH_SIZE][NUM_FEATURES];
   unsigned short target[BATCH_SIZE];
@@ -241,16 +246,16 @@ void NeuralNet::predict(std::vector<Data> &testData, std::vector<unsigned short>
 #endif // SHOW_PREDS
 
     // add predictions and targets to output vectors
-      for(int j = 0; j < BATCH_SIZE; ++j){
-        preds.push_back(batch_pred[j]);
-        targets.push_back(target[j]);
+    for(int j = 0; j < BATCH_SIZE; ++j){
+      preds.push_back(batch_pred[j]);
+      targets.push_back(target[j]);
 
 #ifdef SHOW_PREDS 
-        print_digit(batch[j], target[j]);
-        printf("prediction: %d \n", batch_pred[j]);
+      print_digit(batch[j], target[j]);
+      printf("prediction: %d \n", batch_pred[j]);
 #endif // SHOW_PREDS 
 
-      }
+    }
 
   }
 

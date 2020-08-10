@@ -11,6 +11,8 @@ struct History{
   std::vector<float> loss;
   std::vector<float> valLoss;
   std::vector<float> testAcc;
+  std::vector<unsigned short> bestPreds;
+  std::vector<unsigned short> bestTargets;
 };
 
 class NeuralNet{

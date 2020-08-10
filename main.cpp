@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
   auto start = std::chrono::steady_clock::now();
 
   // main training loop
-  int numEpochs = 100;
+  int numEpochs = 85;
   std::cout << "\nBeginning Training\n";
   History history = model.fit(trainSet, valSet, testData, numEpochs);
 
