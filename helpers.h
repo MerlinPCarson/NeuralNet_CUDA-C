@@ -22,6 +22,7 @@ do {												\
 void printMatrix(float *X, int numRows, int numCols);
 void testDatasets(std::vector<Data> &trainSet, std::vector<Data> &valSet, std::vector<Data> &testData);
 void saveHistory(History history, const char* fileName);
+void saveDataToFile(std::ofstream &file, std::vector<float> &data);
 int cudaDeviceProperties();
 
 void hostBatchPreds(float* output_activations, unsigned short * batch_pred, int output_size, int b_size);
