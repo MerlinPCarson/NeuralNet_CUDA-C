@@ -34,5 +34,12 @@ void hostActivationFuncBackward(float *h_Z, float *h_dervA, float *h_dervZ, int 
 void hostTranspose(float *h_M, float *h_N, int num_MRows, int num_MCols);
 float hostMSE(unsigned short* h_T, float* h_O, int batchSize, int numLabels);
 
+void host_outputError(float* error, unsigned short* t, float* out_layer, int Rows, int Cols);
+void host_hiddenError(float* error, float* dotP, float* hidden_layer, int Rows, int Cols);
+
+void host_error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j);
+void hostUpdateWeights(float eta, float alpha, float* d_dotP, int Rows, int Cols, float* d_w, float* d_delta_weights);
+void host_update_weights(float eta, float alpha, float* weights, int wRows, int wCols, float* dotP, float * delta_weights);
+
 
 #endif // HELPERS_H
