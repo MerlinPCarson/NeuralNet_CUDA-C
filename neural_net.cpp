@@ -15,7 +15,7 @@
 //#define SHOW_PREDS 
 //#define SHOW_BATCH
 #define TEST_MODEL
-// #define USE_GPU
+#define USE_GPU
 
 NeuralNet::NeuralNet(){
   eta = alpha = 0;
@@ -354,18 +354,16 @@ void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * ta
                            (float*)output_error, 
                            (float*)hidden_error
                   );
-    update_hidden_weights(); 
-    update_input_weights(train_batch); 
 #else
-    host_Error_function(target, (float*)output_activation, 
+    host_error_function(target, (float*)output_activation, 
                            (float*)hidden_activation, 
                            (float*)output_weights, 
                            (float*)output_error, 
                            (float*)hidden_error
                   );
-    host_Update_hidden_weights(); 
-    host_Update_input_weights(train_batch); 
 #endif
+    update_hidden_weights(); 
+    update_input_weights(train_batch); 
 }
 
 void NeuralNet::update_hidden_weights(){

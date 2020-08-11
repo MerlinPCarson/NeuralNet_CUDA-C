@@ -300,7 +300,7 @@ int cudaDeviceProperties(){
 void host_outputError(float* error, unsigned short* t, float* out_layer, int Rows, int Cols){
     int index;
     for(int r=0; r < Rows; ++r){
-        for(int c=0; c < Rows; ++c){
+        for(int c=0; c < Cols; ++c){
             index = r*Cols + c;
             if(t[r] == c)
                 error[index] = out_layer[index] * (1 - out_layer[index]) * (1 - out_layer[index]);
@@ -308,26 +308,23 @@ void host_outputError(float* error, unsigned short* t, float* out_layer, int Row
                 error[index] = out_layer[index] * (1 - out_layer[index]) * (0 - out_layer[index]);
         }
     }
-
-
 }
 
 void host_hiddenError(float* error, float* dotP, float* hidden_layer, int Rows, int Cols){
     int index;
     for(int r=0; r < Rows; ++r){
-        for(int c=0; c < Rows; ++c){
+        for(int c=0; c < Cols; ++c){
             index = r*Cols + c;
             error[index] = hidden_layer[index] * (1 - hidden_layer[index]) * (dotP[index]);
         }
     }
-
 }
 
 void host_error_function(unsigned short * t, float* z, float* h, float* output_weights, float* delta_k, float* delta_j){
   int dkRows = BATCH_SIZE, dkCols = NUM_LABELS;
   int djRows = BATCH_SIZE, djCols = HIDDEN_SIZE;
-  host_outputError(delta_k, t, z, dkRows, dkCols);
 
+  host_outputError(delta_k, t, z, dkRows, dkCols);
 
     
   float* errorTransposed;
@@ -345,10 +342,10 @@ void host_error_function(unsigned short * t, float* z, float* h, float* output_w
   free(dotP);
 }
 
-void hostUpdateWeights(float eta, float alpha, float* d_dotP, int Rows, int Cols, float* w, float* delta_weights){
+void hostUpdateWeights(float eta, float alpha, float* dotP, int Rows, int Cols, float* w, float* delta_weights){
     int index;
     for(int r=0; r < Rows; ++r){
-        for(int c=0; c < Rows; ++c){
+        for(int c=0; c < Cols; ++c){
             index = r*Cols + c;
             delta_weights[index] = eta * dotP[index]/BATCH_SIZE + alpha * delta_weights[index];
             w[index] += delta_weights[index];
