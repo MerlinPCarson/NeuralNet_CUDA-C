@@ -15,7 +15,7 @@
 //#define SHOW_PREDS 
 //#define SHOW_BATCH
 #define TEST_MODEL
-#define USE_GPU
+// #define USE_GPU
 
 NeuralNet::NeuralNet(){
   eta = alpha = 0;
@@ -345,6 +345,8 @@ void NeuralNet::show_weights(){
 }
 
 void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * target){
+
+#ifdef USE_GPU
     // calculate output and hidden layer errors
     error_function(target, (float*)output_activation, 
                            (float*)hidden_activation, 
@@ -354,6 +356,16 @@ void NeuralNet::backward(float train_batch[][NUM_FEATURES],  unsigned short * ta
                   );
     update_hidden_weights(); 
     update_input_weights(train_batch); 
+#else
+    host_Error_function(target, (float*)output_activation, 
+                           (float*)hidden_activation, 
+                           (float*)output_weights, 
+                           (float*)output_error, 
+                           (float*)hidden_error
+                  );
+    host_Update_hidden_weights(); 
+    host_Update_input_weights(train_batch); 
+#endif
 }
 
 void NeuralNet::update_hidden_weights(){
@@ -363,18 +375,25 @@ void NeuralNet::update_hidden_weights(){
   * layer -- the output-to-hidden layer
   */
   
-  float* hiddenActsT;
+  float *hiddenActsT, *dotP;
+  
   hiddenActsT = (float*)malloc(HIDDEN_SIZE * BATCH_SIZE * sizeof(float));
-  hostTranspose((float*)hidden_activation, hiddenActsT, BATCH_SIZE, HIDDEN_SIZE);
-
-  float* dotP;
   dotP = (float*)malloc(HIDDEN_SIZE*NUM_LABELS*sizeof(float));
+
+#ifdef USE_GPU
+  transpose((float*)hidden_activation, hiddenActsT, BATCH_SIZE, HIDDEN_SIZE);
 
   // layer inputs x layer errors
   dotProduct(hiddenActsT, (float*)output_error, dotP, HIDDEN_SIZE, BATCH_SIZE, BATCH_SIZE, NUM_LABELS);
 
   update_weights(eta, alpha, (float*)output_weights, HIDDEN_SIZE, NUM_LABELS, dotP, (float*)delta_output_weights);
+#else
+  hostTranspose((float*)hidden_activation, hiddenActsT, BATCH_SIZE, HIDDEN_SIZE);
   
+  hostDotProduct(hiddenActsT, (float*)output_error, dotP, HIDDEN_SIZE, BATCH_SIZE, BATCH_SIZE, NUM_LABELS);
+
+  host_update_weights(eta, alpha, (float*)output_weights, HIDDEN_SIZE, NUM_LABELS, dotP, (float*)delta_output_weights);
+#endif
   free(hiddenActsT);
   free(dotP);
 }
@@ -385,18 +404,23 @@ void NeuralNet::update_input_weights(float batch[BATCH_SIZE][NUM_FEATURES]){
   * layer -- the hidden-to-input layer
   */
 
-  float* batchT;
+  float *batchT, *dotP;
   batchT = (float*)malloc(NUM_FEATURES * BATCH_SIZE * sizeof(float));
-  hostTranspose((float*)batch, batchT, NUM_FEATURES, BATCH_SIZE);
-
-  float* dotP;
-  // layer inputs x layer errors
   dotP = (float*)malloc(NUM_FEATURES*HIDDEN_SIZE*sizeof(float));
+#ifdef USE_GPU
+  transpose((float*)batch, batchT, NUM_FEATURES, BATCH_SIZE);
+
+  // layer inputs x layer errors
   dotProduct(batchT, (float*)hidden_error, dotP, NUM_FEATURES, BATCH_SIZE, BATCH_SIZE, HIDDEN_SIZE);
 
   //update_weights(eta, alpha, w, weightRows, weightCols, dotP, pRows, pCols );
   update_weights(eta, alpha, (float*)hidden_weights, NUM_FEATURES, HIDDEN_SIZE, dotP, (float*)delta_hidden_weights);
 
+#else
+  hostTranspose((float*)batch, batchT, NUM_FEATURES, BATCH_SIZE);
+  hostDotProduct(batchT, (float*)hidden_error, dotP, NUM_FEATURES, BATCH_SIZE, BATCH_SIZE, HIDDEN_SIZE);
+  host_update_weights(eta, alpha, (float*)hidden_weights, NUM_FEATURES, HIDDEN_SIZE, dotP, (float*)delta_hidden_weights);
+#endif
   free(batchT);
   free(dotP);
 }

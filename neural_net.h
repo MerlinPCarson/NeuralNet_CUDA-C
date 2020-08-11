@@ -31,13 +31,12 @@ class NeuralNet{
         void init_weights();
         void show_weights();
         void calc_errors(unsigned short * target);
-        void update_hidden_weights();
-        void update_input_weights(float batch[][NUM_FEATURES]);
 
         void make_batch(float batch[][NUM_FEATURES], unsigned short * target, std::vector<Data> &dataSet, int * order, int batchNum);
-
         void forward(float batch[][NUM_FEATURES]);
         void backward(float batch[][NUM_FEATURES], unsigned short * t);
+        void update_hidden_weights();
+        void update_input_weights(float batch[][NUM_FEATURES]);
 
         float eta;            // learning rate
         float alpha;          // momentum coefficient
