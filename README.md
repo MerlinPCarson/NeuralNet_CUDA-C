@@ -2,7 +2,7 @@
 
 Neural Network implementation with CUDA C for the prediction of MNIST handwritten digits.
 
-[Project paper](https://github.com/mpc6/NeuralNet_CUDA-C/blob/master/Neural_Network_CUDA_C.pdf)
+[Project research paper using LaTeX](https://github.com/mpc6/NeuralNet_CUDA-C/blob/master/Neural_Network_CUDA_C.pdf)
 
 ## Required datasets
 
